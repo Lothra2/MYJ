@@ -58,6 +58,8 @@
 
     .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
     .grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
+    /* Score row needs more room for Tornado labels */
+    .grid-3.tornado-row{grid-template-columns:minmax(280px,0.9fr) minmax(460px,1.6fr) minmax(200px,0.7fr); align-items:start}
     .center{text-align:center}
     .num{font-variant-numeric:tabular-nums}
 
@@ -212,7 +214,7 @@
         <div class="pill">Attractiveness (0–100): <b class="num" id="att_all">—</b></div>
       </div>
 
-      <div class="grid-3" style="margin-top:16px">
+      <div class="grid-3 tornado-row" style="margin-top:16px">
         <div class="card">
           <strong>Ranking (Scorecard)</strong>
           <div id="rankScore" style="margin-top:8px"></div>
@@ -854,6 +856,7 @@ function drawBarsAnimated(canvasId, series, opts={}){
   const gap = (W - pad*2) / entries.length * 0.4;
 
   const {bar:barColor, cat:catColor, val:valColor, halo} = chartColors();
+  const isDark = getTheme()==='dark';
 
   const cacheKey = canvasId;
   const prev = previousSeriesCache[cacheKey] || Object.fromEntries(entries.map(([k])=>[k,0]));
@@ -879,14 +882,16 @@ function drawBarsAnimated(canvasId, series, opts={}){
       ctx.fillStyle = catColor; 
       ctx.fillText(k, x+bw/2, H-10*devicePixelRatio);
 
-      // valor con halo para contraste
+      // valor con halo para contraste solo en dark mode
       const txt = (+v).toFixed(decimals);
       ctx.font = `600 ${12*devicePixelRatio}px sans-serif`;
-      ctx.strokeStyle = halo;
-      ctx.lineWidth = (getTheme()==='light' ? 3 : 4) * devicePixelRatio;
-      ctx.lineJoin = 'round';
       const ty = Math.max(12*devicePixelRatio, y-6*devicePixelRatio);
-      ctx.strokeText(txt, x+bw/2, ty);
+      if(isDark){
+        ctx.strokeStyle = halo;
+        ctx.lineWidth = 4 * devicePixelRatio;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(txt, x+bw/2, ty);
+      }
       ctx.fillStyle = valColor;
       ctx.fillText(txt, x+bw/2, ty);
     });
@@ -960,6 +965,7 @@ function drawTornado(){
 
   const data = tornadoData(sensCountrySel.value || 'Vietnam');
   const {up:UP, down:DOWN, cat:CAT, axis:AXIS, val:VAL, grid:GRID, halo:HALO} = chartColors();
+  const isDark = getTheme()==='dark';
 
   // compute dynamic left pad based on label widths
   ctx.font = `${12*devicePixelRatio}px sans-serif`;
@@ -987,9 +993,11 @@ function drawTornado(){
   ctx.beginPath(); ctx.moveTo(midX, padTop-4*devicePixelRatio); ctx.lineTo(midX, H-padBottom+4*devicePixelRatio); ctx.stroke();
 
   // value style (halo para claridad)
-  ctx.strokeStyle = HALO;
-  ctx.lineWidth = (getTheme()==='light' ? 3 : 4) * devicePixelRatio;
-  ctx.lineJoin = 'round';
+  if(isDark){
+    ctx.strokeStyle = HALO;
+    ctx.lineWidth = 4 * devicePixelRatio;
+    ctx.lineJoin = 'round';
+  }
 
   // rows
   data.forEach((d, i)=>{
@@ -1016,12 +1024,12 @@ function drawTornado(){
     ctx.fillStyle = VAL;
     ctx.textAlign='left';
     const upTxt = `+${d.up.toFixed(2)}`;
-    ctx.strokeText(upTxt, midX + lenUp + 6*devicePixelRatio, cy);
+    if(isDark){ ctx.strokeText(upTxt, midX + lenUp + 6*devicePixelRatio, cy); }
     ctx.fillText(upTxt, midX + lenUp + 6*devicePixelRatio, cy);
 
     ctx.textAlign='right';
     const dnTxt = `-${d.dn.toFixed(2)}`;
-    ctx.strokeText(dnTxt, midX - lenDn - 6*devicePixelRatio, cy);
+    if(isDark){ ctx.strokeText(dnTxt, midX - lenDn - 6*devicePixelRatio, cy); }
     ctx.fillText(dnTxt, midX - lenDn - 6*devicePixelRatio, cy);
   });
 }
@@ -1241,34 +1249,65 @@ function buildAIContext(){
   };
 }
 
-/* Cliente robusto con Basic Auth + timeout y mensajes claros */
-async function callNetlifyAI({endpoint, user, pass, prompt, context}){
-  const ctrl = new AbortController();
-  const to = setTimeout(()=>ctrl.abort(), 20000);
+const CORS_HELPER = 'https://cors.isomorphic-git.org/';
+const friendlyFetchError = 'Failed to fetch. Revisa CORS del endpoint, que sea HTTPS y que no estés usando file://. Si es local, sirve con un servidor (p.ej. npx serve).';
+const isNetworkErr = (err) => err?.name === 'AbortError' || /Failed to fetch/i.test(err?.message || '');
+const normalizeEndpoint = (url) => {
+  if(!url) return url;
+  let out = url.trim();
+  if(!/^https?:\/\//i.test(out)){ out = 'https://'+out; }
+  if(location.protocol === 'https:' && out.startsWith('http://')){
+    out = 'https://' + out.slice(7);
+  }
+  return out;
+};
+const withCorsHelper = (url) => url?.startsWith(CORS_HELPER) ? url : CORS_HELPER + url;
 
+/* Cliente robusto con Basic Auth + timeout, auto-upgrade HTTPS y proxy CORS */
+async function callNetlifyAI({endpoint, user, pass, prompt, context}){
   const headers = { 'Content-Type':'application/json' };
   if(user || pass) headers['Authorization'] = 'Basic ' + btoa(`${user}:${pass}`);
+  const payload = JSON.stringify({ mode:'market-entry-advisor', lang:'es', prompt, context });
 
-  let res;
+  const doFetch = async (target)=>{
+    const ctrl = new AbortController();
+    const to = setTimeout(()=>ctrl.abort(), 20000);
+    try{
+      const res = await fetch(target, {
+        method:'POST',
+        headers,
+        body: payload,
+        signal: ctrl.signal,
+        cache: 'no-store',
+        redirect: 'follow',
+        mode: 'cors'
+      });
+      clearTimeout(to);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const data = await res.json().catch(()=> ({}));
+      if(data && data.ok===false){ throw new Error(data.error || 'AI request failed'); }
+      return data.text || data.answer || data.result || JSON.stringify(data);
+    }catch(err){
+      clearTimeout(to);
+      throw err;
+    }
+  };
+
+  const sanitized = normalizeEndpoint(endpoint);
   try{
-    res = await fetch(endpoint, {
-      method:'POST',
-      headers,
-      body: JSON.stringify({ mode:'market-entry-advisor', lang:'es', prompt, context }),
-      signal: ctrl.signal,
-      cache: 'no-store',
-      redirect: 'follow'
-    });
+    return await doFetch(sanitized);
   }catch(err){
-    clearTimeout(to);
-    throw new Error('Failed to fetch. Revisa CORS del endpoint, que sea HTTPS y que no estés usando file://. Si es local, sirve con un servidor (p.ej. npx serve).');
+    if(isNetworkErr(err)){
+      try{
+        return await doFetch(withCorsHelper(sanitized));
+      }catch(proxyErr){
+        if(isNetworkErr(proxyErr)) throw new Error('No se pudo contactar al endpoint incluso usando el proxy CORS. Verifica que responda por HTTPS.');
+        throw proxyErr;
+      }
+    }
+    if(/Failed to fetch/i.test(err.message||'')) throw new Error(friendlyFetchError);
+    throw err;
   }
-  clearTimeout(to);
-
-  if(!res.ok) throw new Error('HTTP '+res.status);
-  const data = await res.json().catch(()=> ({}));
-  if(data && data.ok===false){ throw new Error(data.error || 'AI request failed'); }
-  return data.text || data.answer || data.result || JSON.stringify(data);
 }
 
 chatSendBtn.addEventListener('click', async ()=>{
