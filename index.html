@@ -369,7 +369,7 @@
         <div class="card ai-cred">
           <div style="font-weight:800; letter-spacing:.02em">Netlify AI Connection</div>
           <label>Endpoint
-            <input id="aiEndpoint" type="url" value="https://keto-plan-ai.netlify.app/.netlify/functions/grok" />
+            <input id="aiEndpoint" type="url" value="/.netlify/functions/grok" />
           </label>
           <label>API User
             <input id="aiUser" type="text" placeholder="APP_USER" />
@@ -1397,14 +1397,24 @@ const CORS_PROXIES = [
 const friendlyFetchError = 'Failed to fetch. Check that the endpoint exposes HTTPS, allows CORS and that you are not running from file://. If local, serve with e.g. “npx serve”.';
 const isNetworkErr = (err) => err?.name === 'AbortError' || /Failed to fetch/i.test(err?.message || '');
 const normalizeEndpoint = (url) => {
-  if(!url) return url;
+  if (!url) return url;
   let out = url.trim();
-  if(!/^https?:\/\//i.test(out)){ out = 'https://'+out; }
-  if(location.protocol === 'https:' && out.startsWith('http://')){
+
+  // ✅ Soporta rutas relativas: /.netlify/functions/grok
+  if (out.startsWith('/')) {
+    out = location.origin + out;
+  } else if (!/^https?:\/\//i.test(out)) {
+    // También soporta "mi-dominio.netlify.app/.netlify/functions/grok"
+    out = 'https://' + out;
+  }
+
+  // Si alguien pegó http:// y estás en https, lo forzamos a https
+  if (location.protocol === 'https:' && out.startsWith('http://')) {
     out = 'https://' + out.slice(7);
   }
   return out;
 };
+
 const buildProxyUrl = (proxy, url) => {
   if(!proxy || !url) return url;
   if(typeof proxy.apply === 'function') return proxy.apply(url);
