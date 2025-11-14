@@ -1,81 +1,64 @@
-// netlify/functions/grok.js
-export default async (req) => {
-  // CORS
+// netlify/functions/grok.mjs
+export async function handler(event) {
+  // --- CORS ---
   const cors = {
-    "Access-Control-Allow-Origin": "*", // puedes limitarlo a tu dominio si quieres
+    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers":
-      req.headers.get("access-control-request-headers") ||
-      "content-type, authorization",
+    "Access-Control-Allow-Headers": event.headers["access-control-request-headers"] || "content-type, authorization",
     "Access-Control-Max-Age": "86400",
-    "Vary": "Origin",
+    "Vary": "Origin"
   };
 
-  // Preflight
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: cors });
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 204, headers: cors, body: "" };
   }
-
-  if (req.method !== "POST") {
-    return new Response("Method Not Allowed", {
-      status: 405,
-      headers: cors,
-    });
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, headers: cors, body: "Method Not Allowed" };
   }
 
   try {
-    const body = await req.json().catch(() => ({}));
+    // --- Basic Auth (opcional via APP_USER / APP_PASS) ---
+    const needAuth = !!(process.env.APP_USER || process.env.APP_PASS);
+    if (needAuth) {
+      const auth = event.headers.authorization || "";
+      const m = auth.match(/^Basic\s+(.+)$/i);
+      const decoded = m ? Buffer.from(m[1], "base64").toString("utf8") : "";
+      const [u = "", p = ""] = decoded.split(":");
+      if (u !== (process.env.APP_USER || "") || p !== (process.env.APP_PASS || "")) {
+        // 401 sin WWW-Authenticate para NO disparar el popup del navegador
+        return {
+          statusCode: 401,
+          headers: { ...cors, "Content-Type": "application/json" },
+          body: JSON.stringify({ ok: false, error: "Unauthorized" })
+        };
+      }
+    }
+
+    // --- Body ---
+    const body = JSON.parse(event.body || "{}");
     const prompt = String(body?.prompt || "").slice(0, 8000);
     const lang = (body?.lang || "en").slice(0, 8);
     const context = body?.context ? JSON.stringify(body.context).slice(0, 12000) : "";
 
-    // ✅ Basic Auth opcional (usa APP_USER/APP_PASS de tus env vars)
-    const needAuth = process.env.APP_USER || process.env.APP_PASS;
-    if (needAuth) {
-      const auth = req.headers.get("authorization") || "";
-      const expected =
-        "Basic " +
-        Buffer.from(
-          `${process.env.APP_USER || ""}:${process.env.APP_PASS || ""}`
-        ).toString("base64");
-      if (auth !== expected) {
-        return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
-          status: 401,
-          headers: { ...cors, "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="MYJ"' },
-        });
-      }
-    }
-
+    // --- OpenAI ---
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      return new Response(JSON.stringify({ ok: false, error: "Missing OPENAI_API_KEY" }), {
-        status: 500,
+      return {
+        statusCode: 500,
         headers: { ...cors, "Content-Type": "application/json" },
-      });
+        body: JSON.stringify({ ok: false, error: "Missing OPENAI_API_KEY" })
+      };
     }
 
-    const sys = `You are a concise market-entry advisor. Prefer bullet points and numbers.
-If context is present (scores, KPIs, weights), use it directly. Language: ${lang}.`;
-
     const messages = [
-      { role: "system", content: sys },
-      {
-        role: "user",
-        content: context ? `Context:\n${context}\n\nQuestion: ${prompt}` : prompt,
-      },
+      { role: "system", content: `You are a concise market-entry advisor. Prefer bullet points and numbers. Language: ${lang}.` },
+      { role: "user", content: context ? `Context:\n${context}\n\nQuestion: ${prompt}` : prompt }
     ];
 
     const oaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        temperature: 0.2,
-        messages,
-      }),
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "gpt-4o-mini", temperature: 0.2, messages })
     });
 
     if (!oaiRes.ok) {
@@ -86,14 +69,16 @@ If context is present (scores, KPIs, weights), use it directly. Language: ${lang
     const data = await oaiRes.json();
     const text = data?.choices?.[0]?.message?.content || "No answer";
 
-    return new Response(JSON.stringify({ ok: true, text }), {
-      status: 200,
+    return {
+      statusCode: 200,
       headers: { ...cors, "Content-Type": "application/json" },
-    });
+      body: JSON.stringify({ ok: true, text })
+    };
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: e.message || String(e) }), {
-      status: 500,
+    return {
+      statusCode: 500,
       headers: { ...cors, "Content-Type": "application/json" },
-    });
+      body: JSON.stringify({ ok: false, error: e.message || String(e) })
+    };
   }
-};
+}
