@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MYJ Market Entry Scorecard Dashboard (Updated)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    :root{
+      /* Paleta */
+      --ink:#0f172a;
+      --muted:#5b6b8c;
+      --bg:#0b1221;
+      --panel:rgba(255,255,255,.88);
+      --card:#ffffff;
+      --brand:#1b1bcf;
+      --accent:#0ea5e9;
+      --success:#16a34a;
+      --warning:#f97316;
+
+      --radius:24px;
+      --shadow-lg:0 28px 70px rgba(15,23,42,.25);
+      --shadow:0 18px 45px rgba(15,23,42,.18);
+      --shadow-sm:0 10px 28px rgba(15,23,42,.14);
+
+      /* Compat con tu JS original */
+      --brand-2:#16a34a;
+      --brand-3:#1976d2;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;color:var(--ink);min-height:100vh;
+      font-family: Arial, "Helvetica Neue", Helvetica, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+      background:
+        radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.30), transparent 60%),
+        radial-gradient(900px 600px at 85% 5%, rgba(14,165,233,.30), transparent 60%),
+        var(--bg);
+      background-attachment: fixed;
+    }
+
+    main{max-width:1260px;margin:0 auto 88px;padding:32px clamp(16px,4vw,48px) 88px}
+
+    /* HERO */
+    header.hero{
+      margin: 28px auto 26px;
+      padding: clamp(28px,5vw,54px);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(140deg, rgba(27,27,207,.88), rgba(14,165,233,.80)),
+        url('https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1600&q=80') center/cover;
+      color:#fff;
+      box-shadow: var(--shadow-lg);
+      position:relative;overflow:hidden;isolation:isolate;
+    }
+    header.hero::after{
+      content:"";position:absolute;inset:0;
+      background: radial-gradient(650px 350px at 100% 0%, rgba(255,255,255,.35), transparent 55%);
+      z-index:-1;
+    }
+    .hero-eyebrow{
+      letter-spacing:.38em;text-transform:uppercase;font-weight:700;font-size:13px;opacity:.9;margin:0 0 8px
+    }
+    header.hero h1{margin:0 0 10px;font-size:clamp(34px,4.2vw,56px);letter-spacing:.03em}
+    header.hero .lede{
+      margin:0;max-width:900px;line-height:1.55;font-size:clamp(15px,1.9vw,20px);opacity:.92
+    }
+
+    /* TABS */
+    .tabs-wrap{
+      position:sticky;top:0;z-index:50;padding:10px 0 14px;margin-bottom:20px;
+      backdrop-filter: blur(14px);
+      background:rgba(6,10,22,.85);
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .tabs{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:1260px;margin:0 auto;padding:0 16px}
+    .tab-btn{
+      border:1px solid rgba(255,255,255,.22);
+      border-radius:999px;background:transparent;color:#fff;
+      font-weight:700;letter-spacing:.05em;padding:12px 22px;cursor:pointer;
+      text-transform:uppercase;font-size:12px;transition:.18s ease;
+    }
+    .tab-btn:hover{transform:translateY(-2px)}
+    .tab-btn.active{background:#fff;color:var(--brand);box-shadow:0 12px 26px rgba(15,23,42,.35)}
+
+    /* PANELS */
+    .panel{
+      background:var(--panel);border-radius:var(--radius);
+      padding: clamp(22px,3vw,40px);
+      box-shadow:var(--shadow);
+      margin-bottom:28px;display:none;
+    }
+    #tab-1{display:block}
+    .section-heading{
+      margin:0 0 16px;font-size:clamp(20px,2.6vw,28px);
+      letter-spacing:.06em;text-transform:uppercase;color:var(--brand)
+    }
+
+    /* SCORECARDS */
+    .scorecard-container{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:22px
+    }
+    .country-card{
+      position:relative;padding:24px;border-radius:22px;background:#fff;
+      border:1px solid rgba(15,23,42,.08);box-shadow:var(--shadow-sm);
+      cursor:pointer;overflow:hidden;transition:.25s ease;
+      transform-style:preserve-3d;
+    }
+    .country-card::after{
+      content:"";position:absolute;inset:-1px;
+      background:linear-gradient(145deg, rgba(27,27,207,.10), transparent 40%);
+      pointer-events:none;opacity:0;transition:opacity .25s ease
+    }
+    .country-card:hover{transform:translateY(-8px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));box-shadow:0 34px 60px rgba(15,23,42,.22)}
+    .country-card:hover::after{opacity:1}
+    .country-card.top{border:1.5px solid rgba(22,163,74,.55);box-shadow:0 34px 70px rgba(22,163,74,.22)}
+    .rank{
+      position:absolute;top:16px;right:16px;padding:6px 14px;border-radius:999px;
+      font-weight:800;font-size:.85rem;background:rgba(15,23,42,.08)
+    }
+    .country-card.top .rank{background:rgba(22,163,74,.12);color:var(--success)}
+    .country-name{margin:0;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;font-weight:800}
+    .score{margin:6px 0 4px;font-size:52px;font-weight:900;color:var(--brand)}
+    .country-card.top .score{color:var(--success)}
+    .kpi-line{margin:12px 0}
+    .label{font-size:.92rem;color:var(--muted);display:flex;justify-content:space-between}
+    .index-bar{width:100%;height:12px;border-radius:999px;background:rgba(15,23,42,.08);overflow:hidden;margin-top:6px}
+    .index-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--brand) 0%,var(--accent) 100%);transform-origin:left center;animation:grow .8s ease}
+    @keyframes grow{from{transform:scaleX(.1)}to{transform:scaleX(1)}}
+
+    /* TOOLBAR + TABLE (SIN SCROLL HORIZONTAL) */
+    .toolbar{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between;color:var(--muted);font-size:.95rem;margin-bottom:14px}
+    .table-wrap{
+      border-radius:18px;border:1px solid rgba(15,23,42,.08);background:#fff;box-shadow:0 18px 40px rgba(15,23,42,.12);
+      overflow:visible; /* sin scroll */
+    }
+    table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}
+    thead th{
+      position:sticky;top:0;background:#eef2ff;color:var(--brand);text-align:left;padding:14px 12px;
+      font-size:.82rem;letter-spacing:.08em;text-transform:uppercase
+    }
+    tbody td{
+      padding:10px 12px;border-bottom:1px solid rgba(15,23,42,.06);font-size:.95rem;
+      white-space:normal;word-break:break-word
+    }
+    tbody tr:nth-child(even){background:rgba(15,23,42,.015)}
+    tbody tr:hover{background:rgba(27,27,207,.03)}
+    input.kpi-in{
+      width:100%;border-radius:12px;border:1px solid rgba(15,23,42,.15);
+      padding:10px 12px;font-weight:600;color:var(--ink);background:rgba(15,23,42,.02)
+    }
+
+    /* Responsive: tabla -> tarjetas (sin scroll en móviles) */
+    @media (max-width: 860px){
+      .table-wrap{border:none;box-shadow:none;background:transparent}
+      table{display:block}
+      thead{display:none}
+      tbody{display:grid;grid-template-columns:1fr;gap:14px}
+      tbody tr{
+        display:grid;grid-template-columns:1fr;gap:0;background:#fff;border:1px solid rgba(15,23,42,.08);
+        border-radius:16px;box-shadow:var(--shadow-sm);padding:8px 0
+      }
+      tbody td{display:flex;gap:12px;padding:10px 14px;border:none}
+      tbody td::before{
+        content:attr(data-label);flex:0 0 42%;max-width:42%;color:var(--muted);font-weight:700
+      }
+      /* Etiquetas de celdas en móvil */
+      tbody td[data-label="KPI"]{font-weight:700;font-size:1rem}
+    }
+
+    /* ACORDEÓN */
+    .accordion{display:grid;gap:18px}
+    .acc-item{
+      border-radius:18px;border:1px solid rgba(15,23,42,.08);overflow:hidden;background:#fff;box-shadow:var(--shadow-sm);transition:.2s
+    }
+    .acc-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;cursor:pointer;font-weight:700;letter-spacing:.04em}
+    .acc-item.open .acc-head{background:rgba(27,27,207,.06)}
+    .acc-body{display:none;padding:0 22px 22px;color:var(--muted);line-height:1.6}
+    .acc-item.open .acc-body{display:block}
+    .flag{width:12px;height:12px;border-radius:999px;margin-right:12px}
+    .acc-title{display:flex;align-items:center;font-size:1rem}
+
+    /* MEMO */
+    .memo{
+      background:#fff;border-radius:28px;padding:clamp(22px,4vw,48px);
+      border:1px solid rgba(15,23,42,.08);box-shadow:0 34px 70px rgba(15,23,42,.22)
+    }
+    .memo h2{text-transform:uppercase;letter-spacing:.2em;margin-top:0;color:var(--brand)}
+    .memo .meta{display:flex;flex-wrap:wrap;gap:18px;color:var(--muted);font-size:.9rem;margin-bottom:18px}
+    .hr{height:1px;background:rgba(15,23,42,.08);margin:22px 0}
+
+    /* BOTÓN TOP */
+    .top-link{
+      position:fixed;right:22px;bottom:22px;background:var(--brand);color:#fff;border:none;border-radius:999px;
+      padding:14px 18px;box-shadow:0 20px 35px rgba(27,27,207,.35);cursor:pointer;font-weight:800;letter-spacing:.08em
+    }
+
+    /* Animación al cambiar de tab */
+    .fade-in{animation:fade .22s ease}
+    @keyframes fade{from{opacity:.35;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+    /* Accesibilidad: reduce motion */
+    @media (prefers-reduced-motion: reduce){
+      .country-card:hover{transform:none}
+      .index-fill{animation:none}
+      .fade-in{animation:none}
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <!-- HERO: mismo título/subtítulo del HTML 1 -->
+    <header class="hero">
+      <p class="hero-eyebrow">MYJ SCORECARD</p>
+      <h1>MYJ Market Entry Scorecard</h1>
+      <p class="lede">Updated comparison, editable KPI matrix (values only), insights, and executive summary</p>
+    </header>
+
+    <!-- TABS -->
+    <div class="tabs-wrap">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="tab-1">Main Comparison</button>
+        <button class="tab-btn" data-tab="tab-2">KPI Matrix (Values)</button>
+        <button class="tab-btn" data-tab="tab-3">Country Insights</button>
+        <button class="tab-btn" data-tab="tab-4">Executive Summary</button>
+      </div>
+    </div>
+
+    <!-- PANELS -->
+    <section class="panel fade-in" id="tab-1" role="region" aria-labelledby="Main Comparison">
+      <h2 class="section-heading">Country Performance Signal</h2>
+      <div class="scorecard-container" id="cards"></div>
+    </section>
+
+    <section class="panel" id="tab-2">
+      <div class="toolbar">
+        <div class="hint">Edit the KPI values. (Weights and directions are not shown.)</div>
+      </div>
+      <div class="table-wrap">
+        <table id="kpiTable">
+          <thead>
+            <tr>
+              <th>KPI (enter values in country columns)</th>
+              <th>Vietnam</th>
+              <th>Singapore</th>
+              <th>Malaysia</th>
+              <th>Indonesia</th>
+            </tr>
+          </thead>
+          <tbody id="kpiBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="tab-3">
+      <h2 class="section-heading">Qualitative Intelligence</h2>
+      <div class="accordion" id="insights"></div>
+    </section>
+
+    <section class="panel" id="tab-4">
+      <article class="memo">
+        <div class="meta">
+          <span>Strategy</span>
+          <span>Internal memo</span>
+        </div>
+        <h2>Executive Summary – Entry Recommendation for MYJ</h2>
+        <div class="hr"></div>
+        <div id="execBody"></div>
+      </article>
+    </section>
+  </main>
+
+  <button class="top-link" aria-label="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <script>
+    /***********************
+     * DATA (idéntico a tu HTML 1)
+     ***********************/
+    const countries = [
+      { name: "Vietnam",    score: 55.9, rank: 1, sizeIndex: 0.26, growthIndex: 0.66, easeIndex: 0.38 },
+      { name: "Indonesia",  score: 49.3, rank: 2, sizeIndex: 0.02, growthIndex: 0.75, easeIndex: 0.35 },
+      { name: "Malaysia",   score: 43.3, rank: 3, sizeIndex: 0.77, growthIndex: 0.08, easeIndex: 0.52 },
+      { name: "Singapore",  score: 41.4, rank: 4, sizeIndex: 0.64, growthIndex: 0.29, easeIndex: 0.71 }
+    ];
+
+    const kpiRows = [
+      { kpi: "Total market value in convenience stores (in mio USD)",
+        VN: "243.80", SG: "534.00", MY: "716.90", ID: "74.50" },
+      { kpi: "Value growth percentage (two-year compound annual growth)",
+        VN: "14.4%", SG: "-1.8%", MY: "-12.3%", ID: "24.3%" },
+      { kpi: "Share of fast-moving consumer goods sold in convenience stores (percent)",
+        VN: "7.9%", SG: "11.4%", MY: "16.4%", ID: "0.2%" },
+      { kpi: "Number of convenience stores (doors)",
+        VN: "1,501", SG: "777", MY: "6,763", ID: "1,283" },
+      { kpi: "Sales per store (market value divided by number of stores) (in mio USD)",
+        VN: "0.16", SG: "0.69", MY: "0.11", ID: "0.06" },
+      { kpi: "Net new stores year over year (percent)",
+        VN: "11.5%", SG: "-1.1%", MY: "3.9%", ID: "12.2%" },
+      { kpi: "Real value growth (value growth minus consumer price inflation)",
+        VN: "-1.8%", SG: "-4.5%", MY: "-13.8%", ID: "21.7%" },
+      { kpi: "Trip frequency trend (percent change year over year)",
+        VN: "23.9%", SG: "5.3%", MY: "0.0%", ID: "-0.2%" },
+      { kpi: "Market concentration index (lower suggests easier entry)",
+        VN: "0.30", SG: "0.52", MY: "0.44", ID: "0.34" },
+      { kpi: "Private-label share (percent)",
+        VN: "3.0%", SG: "5.5%", MY: "5.8%", ID: "1.4%" },
+      { kpi: "Readiness for online-to-offline services (qualitative 1–10)",
+        VN: "8", SG: "9", MY: "7", ID: "7" },
+      { kpi: "Cost of operations (qualitative 1–10)",
+        VN: "2", SG: "8", MY: "5", ID: "3" },
+      { kpi: "Logistics / Infrastructure (qualitative 1–10)",
+        VN: "5", SG: "9", MY: "7", ID: "4" },
+      { kpi: "Inflation rate (percent)",
+        VN: "3.3%", SG: "0.7%", MY: "1.5%", ID: "2.7%" },
+      { kpi: "Ease of entry (qualitative 1–10: trade terms, regulation, import)",
+        VN: "6", SG: "8", MY: "7", ID: "4" }
+    ];
+
+    const insightsText = {
+      Indonesia: `
+        <p><strong>Indonesia</strong><br>
+        Indonesia ranks second in overall attractiveness with a score of <strong>49.3</strong>, supported by strong growth fundamentals but constrained by its relatively small reported market size of <strong>$74.5 million</strong>. Despite this, Indonesia’s growth trajectory and evolving retail landscape make it a critical market for MYJ’s regional strategy.</p>
+
+        <p><strong>Market Size and Structure</strong><br>
+        Indonesia’s convenience store sector comprises <strong>1,283</strong> stores, with average sales per store at <strong>$0.06 million</strong>—lower than Singapore and Malaysia, reflecting a fragmented and low-value environment. The share of FMCG sold through convenience stores is negligible (<strong>0.2%</strong>), signaling that modern trade penetration is still in its infancy. This creates significant headroom for growth as consumer preferences shift toward convenience and modern retail formats.<br>
+        The size index of <strong>0.02</strong> underscores the current limitations in absolute scale, but this should not overshadow the structural potential. Urbanization, rising disposable incomes, and digital adoption are reshaping consumption patterns, laying the foundation for sustained expansion.</p>
+
+        <p><strong>Growth Dynamics</strong><br>
+        Indonesia’s growth metrics are exceptional. The value growth rate stands at <strong>24.3%</strong>, the highest among all markets, and net new store openings are up <strong>12.2%</strong> year-over-year, signaling aggressive network expansion. Real value growth is also strong at <strong>21.7%</strong>, indicating genuine gains beyond inflationary effects. The growth index of <strong>0.75</strong> confirms Indonesia’s dynamism, even if starting from a smaller base.<br>
+        Trip frequency trends are slightly negative (<strong>-0.2%</strong>), which may reflect short-term volatility, but overall consumer engagement remains robust. These indicators point to a market in transition, where convenience stores are evolving into hubs for digital payments and last-mile fulfillment.</p>
+
+        <p><strong>Ease of Entry</strong><br>
+        Indonesia’s ease-of-entry index of <strong>0.35</strong> places it among the more accessible markets in the region when interpreted on a “lower = better” scale.  Competitive concentration is relatively low (<strong>0.34</strong>), and private-label penetration is minimal (<strong>1.4%</strong>), creating headroom for innovation and new-brand differentiation.  Although bureaucratic processes and trade compliance can slow early operations, the general business environment continues to improve, and cost of operations (score <strong>3</strong>) remains favorable compared with Singapore and Malaysia.  The combination of moderate regulatory complexity and open retail structure suggests that, while diligence and strong execution are required, Indonesia offers a reasonably navigable entry path for well-capitalized, agile players such as MYJ.</p>
+
+        <p><strong>Competitive Landscape and Opportunities</strong><br>
+        The fragmented structure of Indonesia’s market offers opportunities for new players to carve out a niche. Leading chains such as Indomaret and Alfamart dominate urban centers but are expanding into secondary cities, leaving white space for innovative formats. Digital integration is accelerating, driven by younger, tech-savvy consumers who demand convenience and omnichannel experiences.</p>
+
+        <p><strong>Risks and Considerations</strong><br>
+        Indonesia’s small current market size and operational complexity are key risks. Success will require a differentiated value proposition, strong execution capabilities, and adaptability to local consumer behavior. Economic fluctuations and regulatory changes could impact growth, but the overall trajectory remains positive.</p>
+
+        <p><strong>Conclusion</strong><br>
+        Indonesia is a high-growth market with structural challenges but significant upside. For MYJ, entry here means leveraging growth momentum, building a scalable model, and positioning for long-term success in a market that is rapidly modernizing.</p>
+      `,
+
+      Vietnam: `
+        <p><strong>Vietnam</strong><br>
+        Vietnam ranks first in overall attractiveness with a score of <strong>55.9</strong>, driven by explosive growth and favorable entry conditions. While its absolute market size (<strong>$243.8 million</strong>) is smaller than Malaysia and Singapore, Vietnam’s growth trajectory makes it the most compelling opportunity for MYJ.</p>
+
+        <p><strong>Market Size and Structure</strong><br>
+        Vietnam’s convenience store sector comprises <strong>1,501</strong> stores, with average sales per store at <strong>$0.16 million</strong>. The share of FMCG sold through convenience stores is <strong>7.9%</strong>, indicating that traditional trade still dominates but is losing ground to modern formats. The size index of <strong>0.26</strong> reflects the sector’s early stage, but this is precisely where the opportunity lies: significant white space for expansion beyond Ho Chi Minh City and Hanoi.</p>
+
+        <p><strong>Growth Dynamics</strong><br>
+        Vietnam’s growth metrics are outstanding. The value growth rate is <strong>14.4%</strong>, and net new store openings are up <strong>11.5%</strong> year-over-year, signaling aggressive expansion. Trip frequency trends are up <strong>23.9%</strong>, pointing to evolving consumer habits and increasing reliance on convenience formats. Although real value growth is slightly negative (<strong>-1.8%</strong>) due to inflation, the overall momentum remains strong. The growth index of <strong>0.66</strong> confirms Vietnam’s position as a high-growth market.</p>
+
+        <p><strong>Ease of Entry</strong><br>
+        With a low ease-of-entry index of <strong>0.38</strong>—where a lower score indicates a more accessible market—Vietnam remains one of the easier environments for new entrants among the four markets.  Market concentration is modest (<strong>0.30</strong>), suggesting that competitive pressures are not prohibitive, and private-label share is limited (<strong>3%</strong>), leaving space for differentiation.  Regulatory frameworks are evolving but increasingly transparent, while a low cost of operations (score <strong>2</strong>) further supports scalability.  Although foreign investors must still navigate licensing and local-partnership rules, Vietnam’s combination of open competition, improving regulations, and affordable operating conditions makes it one of the most approachable markets for MYJ’s expansion.</p>
+
+
+        <p><strong>Competitive Landscape and Opportunities</strong><br>
+        Vietnam’s market is fragmented, with international chains like Circle K, FamilyMart, and 7-Eleven expanding aggressively. However, no single player dominates, creating opportunities for new entrants to establish a foothold. The rapid modernization of retail and rising disposable incomes provide a long growth runway.</p>
+
+        <p><strong>Risks and Considerations</strong><br>
+        Vietnam’s smaller absolute market size and lower sales per store compared to Singapore are challenges, but they are outweighed by the sector’s rapid growth and transformation. Regulatory changes and operational hurdles must be navigated, but the overall environment is improving, especially for foreign investors.</p>
+
+        <p><strong>Conclusion</strong><br>
+        Vietnam is a market on the cusp of transformation, offering MYJ the chance to get in early, shape consumer behavior, and build scale as modern retail gains share. The rationale for prioritizing Vietnam is clear: future potential outweighs current limitations.</p>
+      `,
+
+      Singapore: `
+        <p><strong>Singapore</strong><br>
+        Singapore ranks fourth with a score of <strong>41.4</strong>, reflecting maturity and high barriers to entry despite its relatively large market size (<strong>$534 million</strong>).</p>
+
+        <p><strong>Market Size and Structure</strong><br>
+        Singapore’s convenience store sector comprises <strong>777</strong> stores, with the highest sales per store at <strong>$0.69 million</strong>. The share of FMCG sold through convenience stores is <strong>11.4%</strong>, and the size index of <strong>0.64</strong> underscores the market’s scale and sophistication.</p>
+
+        <p><strong>Growth Dynamics</strong><br>
+        Growth is modest, with a value growth rate of <strong>-1.8%</strong> and net new store openings down <strong>1.1%</strong>. Real value growth is negative (<strong>-4.5%</strong>), and the growth index is only <strong>0.29</strong>, signaling stagnation. Trip frequency trends are up slightly (<strong>5.3%</strong>), but overall, the market is stable rather than dynamic.</p>
+
+        <p><strong>Ease of Entry</strong><br>
+        Using the “lower = easier” convention, Singapore’s ease-of-entry index of <strong>0.71</strong> marks it as the most challenging market among the four countries.  High operating costs (score <strong>8</strong>), intense market concentration (<strong>0.52</strong>), and limited real-estate availability create formidable obstacles for new entrants.  While the regulatory environment is transparent and infrastructure world-class, these advantages are offset by steep capital requirements and saturated competition.  The qualitative ease-of-entry ranking therefore reflects structural difficulty rather than administrative friction: entering Singapore is feasible, but scaling profitably is hard.  For MYJ, this translates into a need for premium positioning, differentiated offerings, and operational excellence to justify the higher cost of doing business.</p>
+
+        <p><strong>Competitive Landscape and Opportunities</strong><br>
+        Singapore offers high consumer spending power, a sophisticated retail infrastructure, and a strong digital ecosystem. For MYJ, Singapore could serve as a testbed for premium concepts and digital-first strategies, leveraging its stability and technological advancement.</p>
+
+        <p><strong>Risks and Considerations</strong><br>
+        Singapore’s limited scale and high barriers to entry are significant challenges. The market is highly concentrated, and new entrants must compete with established players who have deep local knowledge and strong brand loyalty.</p>
+
+        <p><strong>Conclusion</strong><br>
+        Singapore is best approached as a strategic outpost for piloting innovative concepts rather than as a core growth engine. Its sophistication offers learning opportunities, but its limited upside makes it a lower priority.</p>
+      `,
+
+      Malaysia: `
+        <p><strong>Malaysia</strong><br>
+        Malaysia ranks third with a score of <strong>43.3</strong>, driven by size but hampered by weak growth and moderate entry barriers.</p>
+
+        <p><strong>Market Size and Structure</strong><br>
+        Malaysia has the largest absolute market size (<strong>$716.9 million</strong>) and the highest size index (<strong>0.77</strong>), supported by <strong>6,763</strong> stores. However, sales per store are low (<strong>$0.11 million</strong>), and FMCG penetration is <strong>16.4%</strong>, indicating maturity.</p>
+
+        <p><strong>Growth Dynamics</strong><br>
+        Growth is sluggish, with a value growth rate of <strong>-12.3%</strong>, real value growth of <strong>-13.8%</strong>, and a growth index of only <strong>0.08</strong>. Net new store openings are modest (<strong>3.9%</strong>), and trip frequency is flat. These metrics suggest a saturated market with limited upside.</p>
+
+        <p><strong>Ease of Entry</strong><br>
+        Malaysia’s ease-of-entry index of <strong>0.52</strong> signals a market with moderate but tangible barriers for newcomers.  Under the “lower = easier” interpretation, this mid-range score reflects a business environment that is workable yet competitive.  The market concentration index (<strong>0.44</strong>) shows that leading incumbents maintain strong positions, and private-label penetration (<strong>5.8%</strong>) intensifies price competition and limits differentiation.  Operating costs (score <strong>5</strong>) are manageable but rising, while regulatory procedures and local-partnership requirements can add complexity.  Overall, Malaysia remains accessible to capable entrants, though success will depend on niche positioning, efficient operations, and sustained brand investment rather than broad-scale roll-out.</p>
+
+        <p><strong>Competitive Landscape and Opportunities</strong><br>
+        While there are opportunities in underserved segments or regions, the overall environment is less favorable for rapid expansion. The sector is dominated by established players, and new entrants must compete on price, service, and innovation to gain market share.</p>
+
+        <p><strong>Risks and Considerations</strong><br>
+        Malaysia’s limited growth, high barriers to entry, and crowded competitive landscape make it a challenging market for new entrants. The sector is mature, and opportunities for disruptive growth are limited.</p>
+
+        <p><strong>Conclusion</strong><br>
+        For MYJ, Malaysia may offer selective opportunities, but it does not justify prioritization over Vietnam or Indonesia. The market’s challenges outweigh its advantages, making it a lower priority for regional expansion.</p>
+      `
+    };
+
+    const execSummaryHTML = `
+      <p><strong>Strategic Recommendation for MYJ (Executive Summary)</strong></p>
+      <p>Based on the updated scorecard, the recommended sequence for market entry is:</p>
+
+      <p><strong>Vietnam (Score: 55.9)</strong><br>
+      Vietnam stands out as the most attractive market for MYJ’s entry, driven by explosive growth, a fragmented competitive landscape, and favorable conditions for new entrants. The sector is still in its early stages, with significant white space for expansion and a long growth runway. With a value growth rate of <strong>14.4%</strong>, net new store openings up <strong>11.5%</strong>, and trip frequency rising by <strong>23.9%</strong>, Vietnam offers a rare combination of high growth and accessible entry conditions. The low ease-of-entry index (<strong>0.38</strong>) reflects an environment that remains competitive yet navigable, supported by improving regulations and relatively low operating costs. For MYJ, Vietnam represents an opportunity to get in early, shape the market, and ride the next wave of retail evolution. The rationale for prioritizing Vietnam is not just about current size (<strong>$243.8M</strong>), but about future potential—the opportunity to build scale as the market matures.</p>
+
+      <p><strong>Indonesia (Score: 49.3)</strong><br>
+      Indonesia offers a fast-growing and evolving market, making it the logical second step for scalable success. Despite its smaller current size (<strong>$74.5M</strong>), Indonesia posts the highest growth rate at <strong>24.3%</strong>, strong real value growth (<strong>21.7%</strong>), and net new store openings up <strong>12.2%</strong>, signaling aggressive expansion. The market is characterized by urbanization, rising incomes, and rapid adoption of modern retail formats, creating structural tailwinds for convenience retail. With an ease-of-entry index of <strong>0.35</strong>—lower than Malaysia or Singapore—Indonesia remains relatively accessible for disciplined entrants with operational strength and adaptability. For MYJ, Indonesia is a market where entry requires strong execution and local insight but offers open competitive space and significant upside potential.</p>
+
+      <p><strong>Malaysia (Score: 43.3)</strong><br>
+      Malaysia ranks third, driven by its large absolute size (<strong>$716.9M</strong>) and extensive store network (<strong>6,763</strong> outlets), but hampered by weak growth and moderate entry barriers. The market shows negative value growth (<strong>-12.3%</strong>), real value decline (<strong>-13.8%</strong>), and a low growth index (<strong>0.08</strong>), signaling saturation. While opportunities exist in underserved regions, the overall environment is less favorable for rapid expansion. The moderate ease-of-entry index (<strong>0.52</strong>) points to tangible competitive and regulatory barriers. Market concentration is high, private-label competition is significant, and new entrants must rely on targeted strategies, differentiation, and efficiency to succeed. For MYJ, Malaysia should be approached selectively, focusing on niche plays rather than broad market entry.</p>
+
+      <p><strong>Singapore (Score: 41.4)</strong><br>
+      Singapore provides a stable, sophisticated environment for piloting new concepts, premium offerings, or digital-first strategies. The market’s size (<strong>$534M</strong>) and high sales per store (<strong>$0.69M</strong>) reflect strong consumer spending power, but growth is stagnant (<strong>-1.8%</strong> value growth, <strong>-4.5%</strong> real growth) and barriers to entry are steep. Under the “lower = better” framework, Singapore’s high ease-of-entry index (<strong>0.71</strong>) makes it the most challenging market for new entrants. High operating costs, market saturation, and severe concentration mean that while infrastructure and regulation are world-class, scalability is limited. For MYJ, Singapore should be leveraged as a strategic outpost for innovation and operational excellence, not as a primary growth engine.</p>
+
+      <p><strong>Strategic Rationale</strong><br>
+      This sequence is supported by both the scorecard metrics and underlying market realities: demographic trends, consumer behavior, competitive intensity, and regulatory environment. By starting with the most attractive markets, MYJ can maximize ROI, build regional expertise, and create a scalable model for future growth. The “lower = easier” approach to entry reinforces Vietnam’s and Indonesia’s positions as the most practical launchpads, balancing opportunity with execution feasibility. Malaysia, while sizable, requires selectivity, and Singapore’s high barriers make it more suitable as a hub for innovation and brand refinement. This strategy ensures efficient capital deployment, quick learning, and a clear progression from accessible to complex markets.</p>
+
+      <p><strong>Additional Considerations</strong><br>
+      Vietnam and Indonesia should be prioritized for immediate entry and investment, given their growth potential, open market structures, and favorable entry profiles.<br>
+      Singapore should be leveraged as a strategic hub for premium positioning, digital integration, and operational excellence.<br>
+      Malaysia should be approached selectively, focusing on niche opportunities, regional pilots, or partnership-led models rather than broad expansion.</p>
+    `;
+
+    /***********************
+     * RENDER – TAB 1 Cards
+     ***********************/
+    function renderCards(){
+      const wrap = document.getElementById('cards');
+      wrap.innerHTML='';
+      countries.slice().sort((a,b)=>a.rank-b.rank).forEach(c=>{
+        const el = document.createElement('div');
+        el.className='country-card'+(c.rank===1?' top':'');
+        el.innerHTML = `
+          <div class="rank">#${c.rank}</div>
+          <p class="country-name">${c.name}</p>
+          <p class="score" aria-label="Attractiveness score">${c.score.toFixed(1)}</p>
+
+          <div class="kpi-line" title="Relative market size">
+            <div class="label"><span>Size Index</span></div>
+            <div class="index-bar"><div class="index-fill" style="width:${c.sizeIndex*100}%"></div></div>
+          </div>
+          <div class="kpi-line" title="Growth momentum">
+            <div class="label"><span>Growth Index</span></div>
+            <div class="index-bar"><div class="index-fill" style="width:${c.growthIndex*100}%"></div></div>
+          </div>
+          <div class="kpi-line" title="Lower = easier entry">
+            <div class="label"><span>Ease of Entry</span></div>
+            <div class="index-bar"><div class="index-fill" style="width:${(1 - c.easeIndex)*100}%"></div></div>
+          </div>
+        `;
+        /* Tilt interactivo sutil */
+        el.addEventListener('mousemove',(e)=>{
+          const r = el.getBoundingClientRect();
+          const x = e.clientX - r.left, y = e.clientY - r.top;
+          const rx = ((y/r.height)-.5)*-6; /* rotación X */
+          const ry = ((x/r.width)-.5)*6;   /* rotación Y */
+          el.style.setProperty('--rx', rx+'deg');
+          el.style.setProperty('--ry', ry+'deg');
+        });
+        el.addEventListener('mouseleave',()=>{
+          el.style.setProperty('--rx','0deg');
+          el.style.setProperty('--ry','0deg');
+        });
+
+        el.addEventListener('click',()=>activateTab('tab-3', c.name));
+        wrap.appendChild(el);
+      });
+    }
+
+    /*********************************
+     * RENDER – TAB 2 (sin scroll horizontal)
+     *********************************/
+    function renderKpiTable(){
+      const body = document.getElementById('kpiBody');
+      body.innerHTML = '';
+
+      kpiRows.forEach((row)=>{
+        const tr = document.createElement('tr');
+
+        const cKPI = document.createElement('td');
+        cKPI.textContent = row.kpi;
+        cKPI.setAttribute('data-label','KPI');
+        tr.appendChild(cKPI);
+
+        const cVN = document.createElement('td');
+        cVN.innerHTML = `<input class="kpi-in" value="${row.VN}">`;
+        cVN.setAttribute('data-label','Vietnam');
+        tr.appendChild(cVN);
+
+        const cSG = document.createElement('td');
+        cSG.innerHTML = `<input class="kpi-in" value="${row.SG}">`;
+        cSG.setAttribute('data-label','Singapore');
+        tr.appendChild(cSG);
+
+        const cMY = document.createElement('td');
+        cMY.innerHTML = `<input class="kpi-in" value="${row.MY}">`;
+        cMY.setAttribute('data-label','Malaysia');
+        tr.appendChild(cMY);
+
+        const cID = document.createElement('td');
+        cID.innerHTML = `<input class="kpi-in" value="${row.ID}">`;
+        cID.setAttribute('data-label','Indonesia');
+        tr.appendChild(cID);
+
+        /* Persistencia inline */
+        tr.querySelectorAll('.kpi-in').forEach((input)=>{
+          input.addEventListener('input', ()=>{
+            const [vn, sg, my, id] = tr.querySelectorAll('.kpi-in');
+            row.VN = vn.value; row.SG = sg.value; row.MY = my.value; row.ID = id.value;
+          });
+        });
+
+        body.appendChild(tr);
+      });
+    }
+
+    /***************************
+     * RENDER – TAB 3 Insights
+     ***************************/
+    function renderInsights(){
+      const wrap = document.getElementById('insights');
+      wrap.innerHTML = '';
+      ['Vietnam','Indonesia','Singapore','Malaysia'].forEach((name, i)=>{
+        const item = document.createElement('div');
+        item.className = 'acc-item' + (i===0?' open':'');
+        item.innerHTML = `
+          <div class="acc-head" role="button" aria-expanded="${i===0?'true':'false'}">
+            <div class="acc-title"><span class="flag" style="background:${flagColor(name)}"></span>${name}</div>
+            <span>▾</span>
+          </div>
+          <div class="acc-body">${insightsText[name]}</div>
+        `;
+        item.querySelector('.acc-head').addEventListener('click',()=>{
+          const open = item.classList.toggle('open');
+          item.querySelector('.acc-head').setAttribute('aria-expanded', open?'true':'false');
+        });
+        wrap.appendChild(item);
+      });
+    }
+    function flagColor(name){
+      switch(name){
+        case 'Indonesia': return '#e11d48';
+        case 'Vietnam': return '#fbbf24';
+        case 'Singapore': return '#14b8a6';
+        case 'Malaysia': return '#6366f1';
+        default: return '#94a3b8';
+      }
+    }
+
+    /**************************************
+     * RENDER – TAB 4 Executive Summary
+     **************************************/
+    function renderExec(){
+      document.getElementById('execBody').innerHTML = execSummaryHTML;
+    }
+
+    /***********************
+     * NAV + INIT
+     ***********************/
+    function activateTab(id, openInsightFor=null){
+      document.querySelectorAll('.panel').forEach(p=>{
+        p.style.display='none';
+        p.classList.remove('fade-in');
+      });
+      const current = document.getElementById(id);
+      current.style.display='block';
+      current.classList.add('fade-in');
+
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
+
+      if (id==='tab-2'){ renderKpiTable(); }
+      if (id==='tab-3'){
+        renderInsights();
+        if(openInsightFor){
+          const items = document.querySelectorAll('#insights .acc-item');
+          items.forEach(i=>{
+            const title = i.querySelector('.acc-title').textContent.trim();
+            if(title.includes(openInsightFor)){
+              i.classList.add('open');
+              i.querySelector('.acc-head').setAttribute('aria-expanded','true');
+              i.scrollIntoView({behavior:'smooth', block:'start'});
+            }
+          });
+        }
+      }
+      if (id==='tab-4'){ renderExec(); }
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>activateTab(btn.dataset.tab));
+    });
+
+    // init
+    (function init(){
+      renderCards();
+      renderKpiTable();
+      renderInsights();
+      renderExec();
+    })();
+  </script>
+</body>
+</html>
