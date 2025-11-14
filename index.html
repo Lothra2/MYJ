@@ -1,0 +1,1319 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Attractiveness Scorecard – Interactive</title>
+  <!-- LZ-String for shareable links -->
+  <script src="https://cdn.jsdelivr.net/npm/lz-string/libs/lz-string.min.js"></script>
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#121833; --muted:#1a2247; --ink:#e7ecff; --ink-dim:#aab2d8; --accent:#7c9cff; --good:#3bd28e; --warn:#ffcc66; --bad:#ff6b6b;
+      --chip:#273065;
+      --card-bg:#ffffff; --card-ink:#1b1e2e; --card-muted:#6b7296; --card-accent:#3a37ff;
+      --shadow:0 14px 34px rgba(0,0,0,.28);
+      --input-bg:#0e1430; --input-border:rgba(255,255,255,.15);
+    }
+    [data-theme="light"]{
+      --bg:#f6f8ff; --panel:#ffffff; --muted:#eef1ff; --ink:#13162b; --ink-dim:#5a6186; --accent:#4252ff;
+      --chip:#e6eaff; --card-bg:#ffffff; --card-ink:#1b1e2e; --card-muted:#6b7296; --card-accent:#3a37ff;
+      --shadow:0 14px 34px rgba(34,57,150,.15);
+      --input-bg:#ffffff; --input-border:#d9def8;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;
+      background:linear-gradient(180deg,var(--bg),var(--bg) 55%,rgba(0,0,0,.05));
+      color:var(--ink); overflow-x:hidden;
+    }
+    .wrap{max-width:2000px; margin:0 auto; padding:24px}
+    header{display:flex; justify-content:space-between; align-items:flex-end; gap:16px; margin-bottom:18px}
+    h1{margin:0; font-weight:800; letter-spacing:.2px;}
+    .subtitle{color:var(--ink-dim); font-size:14px}
+    .tabs{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px}
+    .tab-btn{appearance:none; border:1px solid transparent; background:var(--muted); color:var(--ink); padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600; transition:transform .2s ease}
+    .tab-btn:hover{transform:translateY(-1px)}
+    .tab-btn[aria-selected="true"]{background:var(--accent); color:#fff}
+
+    .panel{background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); padding:16px; border-radius:16px; box-shadow:var(--shadow)}
+    [data-theme="light"] .panel{background:#fff; border-color:#e8ecff}
+    .panel.has-sticky{padding-bottom:96px}
+    .toolbar{display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:16px}
+    .btn{appearance:none; border:1px solid rgba(255,255,255,.18); background:linear-gradient(180deg,#1c2452,#1a2147); color:var(--ink); padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600; transition:transform .2s ease, opacity .2s ease}
+    .btn:hover{transform:translateY(-1px)}
+    .btn.alt{background:transparent; border-color:rgba(255,255,255,.25)}
+    [data-theme="light"] .btn{background:#eff2ff; color:#1c2350; border-color:#dfe5ff}
+    [data-theme="light"] .btn.alt{background:#fff}
+    .btn:disabled{opacity:.5; cursor:not-allowed}
+    .chip{display:inline-flex; align-items:center; gap:6px; background:var(--chip); color:var(--ink); border-radius:999px; padding:6px 10px; font-size:12px}
+    .chip b{font-variant-numeric:tabular-nums}
+    .chip.status{border:1px solid transparent}
+    .chip.status.ok{background:linear-gradient(180deg,#0f2b1d,#0b2016); color:#dfffe7; border-color:rgba(80,180,120,.3)}
+    .chip.status.bad{background:linear-gradient(180deg,#3a1c14,#2b0f0b); color:#ffd6cc; border-color:rgba(200,80,60,.25)}
+    [data-theme="light"] .chip.status.ok{background:#dff7e8; color:#0f5132; border-color:#bce3ce}
+    [data-theme="light"] .chip.status.bad{background:#fde7e7; color:#842029; border-color:#f5c2c7}
+
+    .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+    .grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
+    .center{text-align:center}
+    .num{font-variant-numeric:tabular-nums}
+
+    input[type="number"], input[type="text"], input[type="password"], input[type="url"]{width:120px; background:var(--input-bg); color:var(--ink); border:1px solid var(--input-border); padding:6px 8px; border-radius:8px}
+    input[type="number"].tight{width:100px}
+    select{background:var(--input-bg); color:var(--ink); border:1px solid var(--input-border); padding:6px 8px; border-radius:8px}
+    .sticky-foot{position:sticky; bottom:0; background:linear-gradient(180deg,#0e1430,#0b1020); padding:10px 12px; display:flex; gap:14px; justify-content:flex-end; border-radius:12px; border:1px solid rgba(255,255,255,.08)}
+    [data-theme="light"] .sticky-foot{background:#f2f5ff; border-color:#e6eaff}
+    .sticky-foot .pill{background:rgba(255,255,255,.07)}
+    [data-theme="light"] .sticky-foot .pill{background:#e9eeff}
+
+    .card{background:var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:16px; box-shadow:var(--shadow); animation:pop .35s ease both}
+    [data-theme="light"] .card{background:#fff; border-color:#e8ecff}
+    .panel .card{margin-top:12px}
+    .scrollwrap{overflow:auto; max-height:60vh}
+
+    .input-with-unit{display:flex; align-items:center; justify-content:center; gap:6px}
+    .input-with-unit .unit{font-size:12px; color:var(--ink-dim)}
+
+    .kpi-grid{display:grid; grid-template-columns:360px 120px 100px repeat(4,120px) repeat(4,100px) repeat(4,100px); gap:0}
+    .kpi-grid .h{font-weight:700; background:linear-gradient(180deg,#111939,#0f1736); position:sticky; top:0; z-index:2}
+    [data-theme="light"] .kpi-grid .h{background:#eef1ff}
+    .kpi-grid > div{border-bottom:1px solid rgba(255,255,255,.07); padding:8px 10px}
+    [data-theme="light"] .kpi-grid > div{border-bottom-color:#eef1ff}
+    .kpi-grid .center{display:flex; align-items:center; justify-content:center}
+    .group-head{grid-column: 1 / -1; padding-top:12px; font-weight:700; color:var(--ink-dim); background:transparent; position:sticky; top:0; z-index:1}
+
+    .sum-label{font-weight:700; color:var(--ink-dim); background:rgba(255,255,255,.03)}
+    [data-theme="light"] .sum-label{background:#f5f7ff}
+    .sum-cell{font-weight:800}
+    .sum-cell.ok{color:var(--good)}
+    .sum-cell.warn{color:var(--warn)}
+
+    canvas{width:100%; height:220px; background:linear-gradient(180deg,#0c122b,#0b1025); border:1px solid rgba(255,255,255,.08); border-radius:12px}
+    [data-theme="light"] canvas{background:#f6f8ff; border-color:#e6eaff}
+    .pill{display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,.06); padding:6px 10px; border-radius:12px}
+    [data-theme="light"] .pill{background:#eef2ff}
+
+    .note{font-size:12px; color:var(--ink-dim)}
+
+    .cards-title{font-weight:900; letter-spacing:.15em; color:#c5ccff; margin:4px 0 12px}
+    [data-theme="light"] .cards-title{color:#646bff}
+    .cards-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px}
+    .country-card{
+      background:var(--card-bg); color:var(--card-ink); border-radius:18px; padding:16px;
+      box-shadow:0 10px 24px rgba(0,0,0,.18); position:relative; border:1px solid #eef1ff;
+      animation:fadeup .4s ease both;
+    }
+    .country-card.top{outline:3px solid #bff1cf}
+    .cc-head{display:flex; justify-content:space-between; align-items:flex-start; gap:8px; font-weight:800; letter-spacing:.06em; color:#6b78ff}
+    .cc-rank{background:#eef1ff; color:#444; font-weight:700; border-radius:16px; padding:4px 10px; font-size:12px}
+    .cc-score{font-size:44px; font-weight:900; margin:6px 0 10px; color:#1c23c9}
+    .cc-score.top{color:#1a873b}
+    .meter{margin:10px 0}
+    .meter .label{display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--card-muted); margin-bottom:6px}
+    .meter .val{font-weight:800; color:#3a37ff}
+    .bar{width:100%; height:8px; border-radius:999px; background:#e9ecf6; overflow:hidden}
+    .bar > span{display:block; height:100%; width:0%; background:linear-gradient(90deg,#3a37ff,#6d8bff); border-radius:999px; transition:width .8s cubic-bezier(.2,.7,.2,1)}
+    .country-card.top .bar > span{background:linear-gradient(90deg,#1db954,#65dc93)}
+    .cc-foot{font-size:12px; color:var(--card-muted)}
+
+    .defs-toolbar{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px}
+    .defs-search{width:360px; max-width:100%; background:var(--input-bg); border:1px solid var(--input-border); color:var(--ink); padding:8px 10px; border-radius:10px}
+    .defs-table{display:grid; grid-template-columns:280px 1fr 1fr 280px; border:1px solid rgba(255,255,255,.08); border-radius:14px; overflow:hidden}
+    [data-theme="light"] .defs-table{border-color:#e6eaff}
+    .defs-table .th{font-weight:800; background:linear-gradient(180deg,#111939,#0f1736); padding:10px 12px}
+    [data-theme="light"] .defs-table .th{background:#eef1ff}
+    .defs-table .td{padding:10px 12px; border-top:1px solid rgba(255,255,255,.06)}
+    [data-theme="light"] .defs-table .td{border-top-color:#eef1ff}
+    .defs-table .row{display:contents}
+    .defs-meta{font-size:12px; color:var(--ink-dim); margin-top:8px}
+
+    /* Scenario toolbar */
+    .scenario-wrap{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    .scenario-wrap select{min-width:180px}
+
+    /* AI tab */
+    .ai-grid{display:grid; grid-template-columns:320px 1fr; gap:16px}
+    .ai-cred{display:grid; gap:10px}
+    .ai-cred label{display:grid; gap:6px; font-size:12px; color:var(--ink-dim)}
+    .chat{display:flex; flex-direction:column; gap:10px; height:520px}
+    .chat-log{flex:1; overflow:auto; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px; background:rgba(255,255,255,.03)}
+    [data-theme="light"] .chat-log{border-color:#e6eaff; background:#f7f9ff}
+    .msg{padding:10px 12px; border-radius:12px; max-width:80%}
+    .msg.user{align-self:flex-end; background:linear-gradient(180deg,#1c2452,#1a2147)}
+    .msg.ai{align-self:flex-start; background:rgba(255,255,255,.06)}
+    [data-theme="light"] .msg.user{background:#e8ecff}
+    [data-theme="light"] .msg.ai{background:#fff; border:1px solid #e8ecff}
+    .chat-controls{display:flex; gap:10px; align-items:flex-start}
+    .chat-controls textarea{flex:1; min-height:64px; background:var(--input-bg); color:var(--ink); border:1px solid var(--input-border); border-radius:10px; padding:8px 10px}
+
+    @keyframes pop{from{transform:scale(.98); opacity:0} to{transform:scale(1); opacity:1}}
+    @keyframes fadeup{from{transform:translateY(8px); opacity:0} to{transform:translateY(0); opacity:1}}
+
+    /* ===== Tornado layout (labels + canvas) ===== */
+    .tornado-wrap{display:grid; grid-template-columns:minmax(180px,36%) 1fr; gap:10px; align-items:stretch}
+    .tornado-labels{display:flex; flex-direction:column; gap:0; padding:6px 6px 6px 8px; font-size:12px; color:var(--ink-dim); border:1px solid rgba(255,255,255,.08); border-radius:12px; background:rgba(255,255,255,.03); overflow:auto}
+    [data-theme="light"] .tornado-labels{border-color:#e6eaff; background:#f7f9ff}
+    .tornado-labels .row{display:flex; align-items:center; justify-content:flex-end; text-align:right; padding:0 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; height:24px}
+
+    /* ===== Print ===== */
+    @media print {
+      body { background:#fff !important; }
+      header, .tabs, .toolbar, .sticky-foot, #scorecardPanel, #signalPanel, #defsPanel, #aiPanel { display:none !important; }
+      #onePanel { display:block !important; }
+      .panel, .card { box-shadow:none !important; border:1px solid #ddd; }
+      .wrap{ max-width:none; padding:12px }
+      canvas{ background:#fff !important; border-color:#ccc !important; }
+      .kpi-grid .h{ background:#f1f3ff !important }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Attractiveness Scorecard – Interactive</h1>
+        <div class="subtitle">Edit <em>inputs</em>, <em>weights</em> and <em>direction</em> directly. Scenarios, sensitivity & AI advisor included.</div>
+      </div>
+      <div class="scenario-wrap">
+        <div class="pill"><label><input id="syncToggle" type="checkbox" checked> Sync common values across tabs</label></div>
+        <select id="scenarioSelect" title="Saved scenarios"></select>
+        <button class="btn" id="saveScenarioBtn">Save</button>
+        <button class="btn alt" id="saveAsScenarioBtn">Save as…</button>
+        <button class="btn alt" id="deleteScenarioBtn">Delete</button>
+        <button class="btn alt" id="shareBtn" title="Copy shareable link">Share link</button>
+        <button class="btn alt" id="printBtn" title="Print One-Page">Print</button>
+        <button class="btn alt" id="themeToggle" title="Toggle light/clear mode">Switch to Light</button>
+      </div>
+    </header>
+
+    <div class="tabs" role="tablist">
+      <button class="tab-btn" id="tabScore" role="tab" aria-selected="true">Scorecard</button>
+      <button class="tab-btn" id="tabOne" role="tab" aria-selected="false">One-Page</button>
+      <button class="tab-btn" id="tabSignal" role="tab" aria-selected="false">Signal</button>
+      <button class="tab-btn" id="tabDefs" role="tab" aria-selected="false">KPI Definitions</button>
+      <button class="tab-btn" id="tabAI" role="tab" aria-selected="false">AI Advisor</button>
+    </div>
+
+    <!-- ===== SCORECARD ===== -->
+    <section id="scorecardPanel" class="panel has-sticky" role="tabpanel" aria-labelledby="tabScore">
+      <div class="toolbar">
+        <button class="btn" id="normalizeWeightsBtn">Normalize weights to 1</button>
+        <button class="btn alt" id="resetScoreBtn">Reset tab</button>
+        <span class="chip status" id="sumChip">Sum of weights: <b id="scoreWeightSum">0.00</b></span>
+        <span class="note">Min–max normalization per KPI; for <em>Lower</em>: (max − x)/(max − min). If max=min, normalized=0.</span>
+      </div>
+
+      <div class="card scrollwrap">
+        <div class="kpi-grid" id="scoreGrid"></div>
+      </div>
+
+      <div class="sticky-foot" aria-live="polite">
+        <div class="pill">Weighted total VN: <b class="num" id="tw_vn">0.00</b></div>
+        <div class="pill">SG: <b class="num" id="tw_sg">0.00</b></div>
+        <div class="pill">MY: <b class="num" id="tw_my">0.00</b></div>
+        <div class="pill">ID: <b class="num" id="tw_id">0.00</b></div>
+        <div class="pill">Attractiveness (0–100): <b class="num" id="att_all">—</b></div>
+      </div>
+
+      <div class="grid-3" style="margin-top:16px">
+        <div class="card">
+          <strong>Ranking (Scorecard)</strong>
+          <div id="rankScore" style="margin-top:8px"></div>
+          <canvas id="chartScore"></canvas>
+        </div>
+
+        <!-- ===== Sensitivity (Tornado) ===== -->
+        <div class="card">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px">
+            <strong>Sensitivity (±10% weight) – Tornado</strong>
+            <label>Country:
+              <select id="sensCountry">
+                <option>Vietnam</option>
+                <option>Singapore</option>
+                <option>Malaysia</option>
+                <option>Indonesia</option>
+              </select>
+            </label>
+          </div>
+
+          <!-- NUEVO: columna de etiquetas + canvas separado -->
+          <div class="tornado-wrap" style="margin-top:8px">
+            <div id="tornadoLabels" class="tornado-labels" aria-hidden="true"></div>
+            <canvas id="chartTornado" style="height:360px"></canvas>
+          </div>
+
+          <div class="note">Bars show score change if a KPI weight rises (right) or falls (left) by 10%, keeping Σweights = 1.</div>
+        </div>
+
+        <div class="card">
+          <strong>Quick notes</strong>
+          <ul>
+            <li>Use <em>Scenarios</em> to store and recall different assumptions.</li>
+            <li>Sensitivity shows which KPIs move the country score the most.</li>
+            <li>“Share link” copies a URL with the current state embedded.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ONE-PAGE ===== -->
+    <section id="onePanel" class="panel" role="tabpanel" aria-labelledby="tabOne" hidden>
+      <div class="toolbar">
+        <button class="btn" id="normalizeSizeBtn">Normalize weights – Size</button>
+        <button class="btn" id="normalizeGrowthBtn">Normalize weights – Growth</button>
+        <button class="btn" id="normalizeEaseBtn">Normalize weights – Ease</button>
+        <button class="btn alt" id="resetOneBtn">Reset tab</button>
+        <span class="chip">Size Σ<b id="sumSize">0.00</b></span>
+        <span class="chip">Growth Σ<b id="sumGrowth">0.00</b></span>
+        <span class="chip">Ease Σ<b id="sumEase">0.00</b></span>
+      </div>
+
+      <div class="card scrollwrap">
+        <div id="oneSections"></div>
+      </div>
+
+      <div class="grid-3" style="margin-top:16px">
+        <div class="card">
+          <div><strong>Indices (block averages)</strong></div>
+          <div style="margin-top:8px; display:grid; gap:6px">
+            <div class="pill">Size: <b class="num" id="idxSize">0.00</b></div>
+            <div class="pill">Growth: <b class="num" id="idxGrowth">0.00</b></div>
+            <div class="pill">Ease: <b class="num" id="idxEase">0.00</b></div>
+          </div>
+        </div>
+        <div class="card">
+          <strong>Notes</strong>
+          <ul style="margin-top:8px">
+            <li>Each block index is Σ(normalized × weight) within its block.</li>
+            <li>Weights and % values use 2 decimals.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <strong>Tips</strong>
+          <ul style="margin-top:8px">
+            <li>Toggle <em>Light</em> mode for a print-friendly palette.</li>
+            <li>Use “Print” to export One-Page as PDF.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Four signal charts (kept) -->
+      <div class="card" style="margin-top:16px">
+        <strong>Signal Overview</strong>
+        <div class="grid-2" style="margin-top:12px">
+          <div>
+            <div class="pill" style="margin-bottom:8px">Weighted Total (0–100)</div>
+            <canvas id="chartSigTotal"></canvas>
+          </div>
+          <div>
+            <div class="pill" style="margin-bottom:8px">Size Index (normalized)</div>
+            <canvas id="chartSigSize"></canvas>
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:12px">
+          <div>
+            <div class="pill" style="margin-bottom:8px">Growth Index (normalized)</div>
+            <canvas id="chartSigGrowth"></canvas>
+          </div>
+          <div>
+            <div class="pill" style="margin-bottom:8px">Ease of Entry (normalized)</div>
+            <canvas id="chartSigEase"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SIGNAL ===== -->
+    <section id="signalPanel" class="panel" role="tabpanel" aria-labelledby="tabSignal" hidden>
+      <h2 class="cards-title">COUNTRY PERFORMANCE SIGNAL</h2>
+      <div id="cardsGrid" class="cards-grid"></div>
+      <div class="note" style="margin-top:10px">Cards sorted by <strong>Scorecard weighted total (0–100)</strong>.</div>
+    </section>
+
+    <!-- ===== KPI DEFINITIONS ===== -->
+    <section id="defsPanel" class="panel" role="tabpanel" aria-labelledby="tabDefs" hidden>
+      <div class="defs-toolbar">
+        <input id="defsSearch" class="defs-search" type="search" placeholder="Search by KPI, meaning or formula…" />
+        <span class="chip">Total KPIs: <b id="defsCount">0</b></span>
+      </div>
+      <div class="card">
+        <div class="defs-table" id="defsTable">
+          <div class="row">
+            <div class="th">KPI name</div>
+            <div class="th">What it means</div>
+            <div class="th">How to calculate</div>
+            <div class="th">Example Excel formula</div>
+          </div>
+          <!-- rows render here -->
+        </div>
+        <div class="defs-meta" id="defsMeta"></div>
+      </div>
+    </section>
+
+    <!-- ===== AI ADVISOR ===== -->
+    <section id="aiPanel" class="panel" role="tabpanel" aria-labelledby="tabAI" hidden>
+      <div class="ai-grid">
+        <div class="card ai-cred">
+          <div style="font-weight:800; letter-spacing:.02em">Netlify AI Connection</div>
+          <label>Endpoint
+            <input id="aiEndpoint" type="url" value="https://keto-plan-ai.netlify.app/.netlify/functions/grok" />
+          </label>
+          <label>API User
+            <input id="aiUser" type="text" placeholder="APP_USER" />
+          </label>
+          <label>API Password
+            <input id="aiPass" type="password" placeholder="APP_PASS" />
+          </label>
+          <label><input id="aiRemember" type="checkbox" /> Remember credentials in this browser</label>
+          <button class="btn" id="aiSaveCreds">Save</button>
+          <div class="note">Your prompt can optionally include web searches. Toggle “Attach data” to send the current state (countries, KPIs, weights, indices & rankings).</div>
+        </div>
+
+        <div class="card chat">
+          <div class="chat-log" id="chatLog" aria-live="polite"></div>
+          <div class="chat-controls">
+            <textarea id="chatInput" placeholder="Ask the AI about market entry: drivers, weight suggestions, risks…"></textarea>
+            <div style="display:grid; gap:8px; align-items:flex-start">
+              <label style="font-size:12px; color:var(--ink-dim)"><input type="checkbox" id="aiAttach" checked/> Attach data</label>
+              <button class="btn" id="chatSend">Send</button>
+              <button class="btn alt" id="chatReset">Reset</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+<script>
+/* =================== Base data =================== */
+const scorecardData = {
+  countries: ["Vietnam","Singapore","Malaysia","Indonesia"],
+  kpis: [
+    {name:"Total market value in convenience stores (in mio USD)", unit:"m_usd", weight:0.15, direction:"higher", values:{Vietnam:243.8, Singapore:534.0, Malaysia:716.9, Indonesia:74.5}},
+    {name:"Value growth percentage (two-year compound annual growth)", unit:"percent", weight:0.10, direction:"higher", values:{Vietnam:0.144, Singapore:-0.018, Malaysia:-0.123, Indonesia:0.243}},
+    {name:"Share of fast-moving consumer goods sold in convenience stores (percent)", unit:"percent", weight:0.05, direction:"higher", values:{Vietnam:0.079, Singapore:0.114, Malaysia:0.164, Indonesia:0.002}},
+    {name:"Number of convenience stores (doors)", unit:"count", weight:0.04, direction:"higher", values:{Vietnam:1501, Singapore:777, Malaysia:6763, Indonesia:1283}},
+    {name:"Sales per store (market value divided by number of stores) (in mio USD)", unit:"m_usd", weight:0.05, direction:"higher", values:{Vietnam:0.16242504996668888, Singapore:0.6872586872586872, Malaysia:0.10600325299423333, Indonesia:0.058067030397505846}},
+    {name:"Net new stores year over year (percent)", unit:"percent", weight:0.10, direction:"higher", values:{Vietnam:0.1151560178306092, Singapore:-0.011, Malaysia:0.0385, Indonesia:0.122}},
+    {name:"Real value growth (value growth minus consumer price inflation)", unit:"percent", weight:0.10, direction:"higher", values:{Vietnam:-0.01847746372103123, Singapore:-0.045, Malaysia:-0.138, Indonesia:0.2165}},
+    {name:"Trip frequency trend (percent change year over year)", unit:"percent", weight:0.06, direction:"higher", values:{Vietnam:0.2391304347826089, Singapore:0.05309277699337633, Malaysia:0.0, Indonesia:-0.00152779}},
+    {name:"Market concentration index (lower suggests easier entry)", unit:"index", weight:0.10, direction:"lower", values:{Vietnam:0.304978, Singapore:0.516927, Malaysia:0.44, Indonesia:0.339499}},
+    {name:"Private-label share (percent)", unit:"percent", weight:0.05, direction:"lower", values:{Vietnam:0.03, Singapore:0.055, Malaysia:0.058, Indonesia:0.014}},
+    {name:"Readiness for online-to-offline services (qualitative 1–10)", unit:"qual10", weight:0.02, direction:"higher", values:{Vietnam:8, Singapore:9, Malaysia:7, Indonesia:7}},
+    {name:"Cost of operations (qualitative 1–10)", unit:"qual10", weight:0.05, direction:"lower", values:{Vietnam:2, Singapore:8, Malaysia:5, Indonesia:3}},
+    {name:"Logistics / Infrastructure (qualitative 1–10)", unit:"qual10", weight:0.02, direction:"higher", values:{Vietnam:5, Singapore:9, Malaysia:7, Indonesia:4}},
+    {name:"Inflation rate (percent)", unit:"percent", weight:0.06, direction:"lower", values:{Vietnam:0.0325, Singapore:0.007, Malaysia:0.015, Indonesia:0.0265}},
+    {name:"Ease of entry (qualitative 1–10: trade terms, regulation, import)", unit:"qual10", weight:0.05, direction:"higher", values:{Vietnam:6, Singapore:8, Malaysia:7, Indonesia:4}},
+  ]
+};
+
+const onePageData = {
+  countries:["Vietnam","Singapore","Malaysia","Indonesia"],
+  sections:[
+    {section:"Size", metrics:[
+      {metric:"Total market value in CVS (m USD)", unit:"m_usd", direction:"higher", weight:0.30, values:{Vietnam:243.8, Singapore:534.0, Malaysia:716.9, Indonesia:74.5}},
+      {metric:"Sales per store (m USD)", unit:"m_usd", direction:"higher", weight:0.25, values:{Vietnam:0.16242504996668888, Singapore:0.6872586872586872, Malaysia:0.10600325299423333, Indonesia:0.058067030397505846}},
+      {metric:"Number of CVS (doors)", unit:"count", direction:"higher", weight:0.20, values:{Vietnam:1501, Singapore:777, Malaysia:6763, Indonesia:1283}},
+      {metric:"Share of FMCG in CVS (ratio)", unit:"percent", direction:"higher", weight:0.25, values:{Vietnam:0.079, Singapore:0.114, Malaysia:0.164, Indonesia:0.002}},
+    ]},
+    {section:"Growth", metrics:[
+      {metric:"Value growth % (2Y CAGR)", unit:"percent", direction:"higher", weight:0.30, values:{Vietnam:0.144, Singapore:-0.018, Malaysia:-0.123, Indonesia:0.243}},
+      {metric:"Real value growth %", unit:"percent", direction:"higher", weight:0.25, values:{Vietnam:-0.01847746372103123, Singapore:-0.045, Malaysia:-0.138, Indonesia:0.2165}},
+      {metric:"Net new stores YoY %", unit:"percent", direction:"higher", weight:0.20, values:{Vietnam:0.1151560178306092, Singapore:-0.011, Malaysia:0.0385, Indonesia:0.122}},
+      {metric:"Trip frequency trend %", unit:"percent", direction:"higher", weight:0.15, values:{Vietnam:0.2391304347826089, Singapore:0.05309277699337633, Malaysia:0.0, Indonesia:-0.00152779}},
+      {metric:"Sales/store growth % (proxy)", unit:"percent", direction:"higher", weight:0.10, values:{Vietnam:0.16242504996668888, Singapore:0.6872586872586872, Malaysia:0.10600325299423333, Indonesia:0.058067030397505846}},
+    ]},
+    {section:"Ease of Entry", metrics:[
+      {metric:"Market concentration (HHI top-5)", unit:"index", direction:"lower", weight:0.20, values:{Vietnam:0.304978, Singapore:0.516926509342, Malaysia:0.44, Indonesia:0.339499101126358}},
+      {metric:"Private-label share (ratio)", unit:"percent", direction:"lower", weight:0.10, values:{Vietnam:0.03, Singapore:0.055, Malaysia:0.058, Indonesia:0.014}},
+      {metric:"Cost of operations (qual 1–10)", unit:"qual10", direction:"lower", weight:0.20, values:{Vietnam:2, Singapore:8, Malaysia:5, Indonesia:3}},
+      {metric:"Logistics / Infrastructure (qual 1–10)", unit:"qual10", direction:"higher", weight:0.10, values:{Vietnam:5, Singapore:9, Malaysia:7, Indonesia:4}},
+      {metric:"Inflation rate %", unit:"percent", direction:"lower", weight:0.20, values:{Vietnam:0.0325, Singapore:0.007, Malaysia:0.015, Indonesia:0.0265}},
+      {metric:"Ease of entry (qual 1–10)", unit:"qual10", direction:"higher", weight:0.20, values:{Vietnam:6, Singapore:8, Malaysia:7, Indonesia:4}},
+    ]},
+  ]
+};
+
+/* KPI definitions (sample inline; replace with your Excel-derived list if needed) */
+const kpiDefinitions = [
+  {"name":"Total market value in convenience stores","means":"Total sales value over the last 12 months in the convenience store channel.","how":"Use NIQ Retail Measurement Services to extract market value for convenience stores by country.","formula":"(Input value – no formula)"},
+  {"name":"Value growth percentage (two-year compound annual growth)","means":"Average annual growth rate in sales value over two years.","how":"Compute compound annual growth using end value and value two years ago.","formula":"(@End_Value/@Value_2Y_Ago)^(1/2)-1"},
+  {"name":"Share of fast-moving consumer goods sold in convenience stores","means":"Portion of total FMCG sold through convenience stores.","how":"Divide convenience stores sales by total FMCG sales across all channels.","formula":"@Convenience_Value/@Total_FMCG_Value"},
+  {"name":"Number of convenience stores","means":"Count of active convenience store outlets (doors).","how":"Use latest audited store counts from trade sources or NIQ store universe.","formula":"(Input value – no formula)"},
+  {"name":"Sales per store","means":"Average annual value per convenience store.","how":"Divide market value by number of stores.","formula":"@Market_Value/@Number_of_Stores"},
+  {"name":"Net new stores year over year (percent)","means":"Percent change in number of stores versus last year.","how":"Compute (stores this year – stores last year) / stores last year.","formula":"(@Stores_This_Year-@Stores_Last_Year)/@Stores_Last_Year"},
+  {"name":"Real value growth","means":"Value growth adjusted for inflation.","how":"Subtract inflation rate from nominal value growth percentage.","formula":"@Value_Growth% - @Inflation%"},
+  {"name":"Trip frequency trend","means":"Percent change in number of shopping trips.","how":"Compute percent change versus prior year using trip counts.","formula":"(@Trips_This_Year/@Trips_Last_Year)-1"},
+  {"name":"Market concentration index (top 5) – lower suggests easier entry","means":"Concentration of market power among leading players.","how":"Sum of squared market shares (decimals) for the top 5 players.","formula":"SUMSQ(A1:A5)"},
+  {"name":"Private-label share","means":"Share of sales accounted for private-label products.","how":"Divide private-label value by total market value.","formula":"@PL_Value/@Total_Value"},
+  {"name":"Readiness for online-to-offline services","means":"Qualitative assessment of O2O readiness.","how":"Score 1–10 based on capabilities, apps, logistics, partnerships.","formula":"(Input score – no formula)"},
+  {"name":"Logistics / Infrastructure","means":"Qualitative assessment of distribution infrastructure.","how":"Score 1–10 based on roads, warehousing, delivery.","formula":"(Input score – no formula)"},
+  {"name":"Cost of operations","means":"Qualitative assessment of operating cost level.","how":"Score 1–10 based on labor, rent, utilities.","formula":"(Input score – no formula)"},
+  {"name":"Inflation rate","means":"Annual increase in consumer prices.","how":"Use CPI YoY percentage.","formula":"(Input value – no formula)"},
+  {"name":"Ease of entry","means":"Qualitative commercial & regulatory feasibility.","how":"Score 1–10 covering trade terms, regulation, import.","formula":"(Input score – no formula)"},
+  {"name":"Sales/store growth % (proxy)","means":"Growth proxy using change in sales per store.","how":"Change in sales per store vs prior year.","formula":"(@SPS_t/@SPS_0)-1"}
+];
+
+/* ======= Utils ======= */
+const deepCopy = obj => JSON.parse(JSON.stringify(obj));
+const fmtFixed = (x, d=2) => (x==null || Number.isNaN(+x)) ? '—' : (+x).toLocaleString(undefined,{minimumFractionDigits:d, maximumFractionDigits:d});
+function displayByUnit(unit, v){
+  if(v==null || Number.isNaN(+v)) return '';
+  switch(unit){
+    case 'percent': return (+v*100).toFixed(2);
+    case 'qual10': return Math.round(+v).toString();
+    case 'count': return Math.round(+v).toString();
+    default: return (+v).toString();
+  }
+}
+function stepByUnit(unit){
+  switch(unit){
+    case 'percent': return '0.01';
+    case 'm_usd': return '0.01';
+    case 'index': return '0.001';
+    case 'qual10': return '1';
+    case 'count': return '1';
+    default: return 'any';
+  }
+}
+function parseByUnit(unit, inputVal){
+  const n = +inputVal; if(Number.isNaN(n)) return 0;
+  switch(unit){
+    case 'percent': return n/100;
+    case 'qual10': return Math.round(n);
+    case 'count': return Math.round(n);
+    default: return n;
+  }
+}
+const clamp01 = x => Math.max(0, Math.min(1, x));
+function normalize(valuesByCountry, direction){
+  const entries = Object.entries(valuesByCountry);
+  const vals = entries.map(([_,v]) => +v);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const range = max - min;
+  const out = {};
+  for(const [c,v] of entries){
+    let n = 0;
+    if(range !== 0){
+      const z = (v - min) / range;
+      n = (direction === 'lower') ? 1 - z : z;
+    } else { n = 0; }
+    out[c] = clamp01(n);
+  }
+  return out;
+}
+function ranksFromScores(scores){
+  const arr = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  const rankMap = {}; arr.forEach(([k,_],i)=>{ rankMap[k] = i+1; });
+  return rankMap;
+}
+function getTheme(){ return document.documentElement.getAttribute('data-theme')==='light' ? 'light' : 'dark'; }
+function chartColors(){
+  const isLight = getTheme()==='light';
+  return {
+    bar: isLight ? '#4252ff' : '#7c9cff',
+    cat: isLight ? '#5a6186' : '#aab2d8',
+    val: isLight ? '#0d1230' : '#e7ecff',
+    up:  isLight ? '#2ea44f' : '#3bd28e',
+    down:isLight ? '#cc4422' : '#ff7373',
+    axis:isLight ? '#9aa3c3' : '#7e86ad',
+    grid:isLight ? '#e6eaff' : '#1a2247'
+  };
+}
+
+/* ======= State ======= */
+let state = {
+  scorecard: deepCopy(scorecardData),
+  onepage: deepCopy(onePageData),
+  sync: true,
+  _idxBlock: null,
+  _weightSums: null,
+  _finalScores: null,
+  _scorecardTotals: null,
+  scenario: { currentName: '(Unsaved)' }
+};
+
+/* ======= Scenario helpers (localStorage) ======= */
+const SC_PREFIX = 'scen:';
+const scenarioSelect = document.getElementById('scenarioSelect');
+const listScenarioNames = () => Object.keys(localStorage).filter(k=>k.startsWith(SC_PREFIX)).map(k=>k.slice(SC_PREFIX.length)).sort();
+function refreshScenarioSelect(){
+  const names = listScenarioNames();
+  scenarioSelect.innerHTML = '';
+  const opt0 = document.createElement('option');
+  opt0.textContent = state.scenario.currentName || '(Unsaved)';
+  opt0.value = state.scenario.currentName || '(Unsaved)';
+  scenarioSelect.appendChild(opt0);
+  if(!names.includes(opt0.value)) opt0.textContent += ' *';
+  if(names.length && names[0]!==opt0.value){
+    const sep = document.createElement('option'); sep.disabled = true; sep.textContent = '──────────';
+    scenarioSelect.appendChild(sep);
+  }
+  names.forEach(n=>{ const o = document.createElement('option'); o.value = o.textContent = n; scenarioSelect.appendChild(o); });
+}
+const snapshotState = () => ({ theme:getTheme(), sync:state.sync, scorecard:state.scorecard, onepage:state.onepage });
+function hydrateState(snap){
+  if(!snap) return;
+  state.sync = !!snap.sync;
+  state.scorecard = deepCopy(snap.scorecard || state.scorecard);
+  state.onepage = deepCopy(snap.onepage || state.onepage);
+  if(snap.theme){ document.documentElement.setAttribute('data-theme', snap.theme); }
+}
+function saveScenario(name){ localStorage.setItem(SC_PREFIX+name, JSON.stringify(snapshotState())); state.scenario.currentName = name; refreshScenarioSelect(); }
+function loadScenario(name){ const raw = localStorage.getItem(SC_PREFIX+name); if(!raw) return;
+  hydrateState(JSON.parse(raw)); state.scenario.currentName = name; refreshScenarioSelect();
+  renderScorecard(); renderOnePage(); renderSignal(); drawSignalCharts(); drawTornado();
+}
+function deleteScenario(name){ localStorage.removeItem(SC_PREFIX+name); if(state.scenario.currentName===name) state.scenario.currentName='(Unsaved)'; refreshScenarioSelect(); }
+
+/* ======= Shareable link ======= */
+function shareLinkFromState(){ const s = LZString.compressToEncodedURIComponent(JSON.stringify(snapshotState())); return location.origin + location.pathname + '#s=' + s; }
+function tryLoadFromHash(){
+  const m = location.hash.match(/#s=([^&]+)/); if(!m) return false;
+  try{ const snap = JSON.parse(LZString.decompressFromEncodedURIComponent(m[1])); hydrateState(snap); state.scenario.currentName='(From link)'; refreshScenarioSelect(); return true; }
+  catch(e){ console.warn('Failed to load state from hash', e); return false; }
+}
+
+/* ======= Metric mapping (sync values+directions) ======= */
+const metricMap = {
+  "Total market value in CVS (m USD)":"Total market value in convenience stores (in mio USD)",
+  "Sales per store (m USD)":"Sales per store (market value divided by number of stores) (in mio USD)",
+  "Number of CVS (doors)":"Number of convenience stores (doors)",
+  "Share of FMCG in CVS (ratio)":"Share of fast-moving consumer goods sold in convenience stores (percent)",
+  "Value growth % (2Y CAGR)":"Value growth percentage (two-year compound annual growth)",
+  "Real value growth %":"Real value growth (value growth minus consumer price inflation)",
+  "Net new stores YoY %":"Net new stores year over year (percent)",
+  "Trip frequency trend %":"Trip frequency trend (percent change year over year)",
+  "Sales/store growth % (proxy)":"Sales per store (market value divided by number of stores) (in mio USD)",
+  "Market concentration (HHI top-5)":"Market concentration index (lower suggests easier entry)",
+  "Private-label share (ratio)":"Private-label share (percent)",
+  "Logistics / Infrastructure (qual 1–10)":"Logistics / Infrastructure (qualitative 1–10)",
+  "Inflation rate %":"Inflation rate (percent)",
+  "Ease of entry (qual 1–10)":"Ease of entry (qualitative 1–10: trade terms, regulation, import)",
+  "Cost of operations (qual 1–10)":"Cost of operations (qualitative 1–10)"
+};
+function maybeSyncOnePageValues(){
+  if(!state.sync) return;
+  const scByName = Object.fromEntries(state.scorecard.kpis.map(k=>[k.name,k]));
+  for(const sec of state.onepage.sections){
+    for(const m of sec.metrics){
+      const scName = metricMap[m.metric];
+      if(scName && scByName[scName]){
+        m.values = deepCopy(scByName[scName].values);
+        m.direction = scByName[scName].direction; // sync directions
+      }
+    }
+  }
+}
+
+/* ======= SCORECARD RENDER ======= */
+const scoreGrid = document.getElementById('scoreGrid');
+function renderScorecard(){
+  const {countries,kpis} = state.scorecard;
+  let html = '';
+  const headTop = [
+    '<div class="h">KPI</div>',
+    '<div class="h center">Direction</div>',
+    '<div class="h center">Weight</div>',
+    ...countries.map(c=>`<div class="h center">${c} – Value</div>`),
+    ...countries.map(c=>`<div class="h center">${c} – Norm</div>`),
+    ...countries.map(c=>`<div class="h center">${c} – Weighted</div>`),
+  ].join('');
+  html += headTop;
+
+  kpis.forEach((kpi, idx)=>{
+    const norm = normalize(kpi.values, kpi.direction);
+    const weights = Object.fromEntries(countries.map(c=>[c, norm[c]*kpi.weight]));
+    html += `
+      <div>${kpi.name}</div>
+      <div class="center">
+        <select data-type="sc-dir" data-idx="${idx}">
+          <option value="higher" ${kpi.direction==='higher'?'selected':''}>Higher</option>
+          <option value="lower" ${kpi.direction==='lower'?'selected':''}>Lower</option>
+        </select>
+      </div>
+      <div class="center">
+        <input class="tight" type="number" step="0.01" value="${(+kpi.weight).toFixed(2)}" data-type="sc-w" data-idx="${idx}" />
+      </div>
+      ${countries.map(c=>{
+        const vDisplay = displayByUnit(kpi.unit, kpi.values[c]);
+        const unitChip = kpi.unit==='percent' ? '<span class="unit">%</span>' : '';
+        return `<div class="center"><div class="input-with-unit"><input class="tight" type="number" step="${stepByUnit(kpi.unit)}" value="${vDisplay}" data-type="sc-val" data-idx="${idx}" data-unit="${kpi.unit}" data-country="${c}"/>${unitChip}</div></div>`;
+      }).join('')}
+      ${countries.map(c=>`<div class="center num">${fmtFixed(normalize(kpi.values,kpi.direction)[c],2)}</div>`).join('')}
+
+      ${countries.map(c=>`<div class="center num">${fmtFixed(weights[c],2)}</div>`).join('')}
+    `;
+  });
+
+  // weight sum row
+  const wsum = kpis.reduce((s,k)=>s+(+k.weight||0),0);
+  const okClass = Math.abs(wsum-1)<1e-6 ? 'ok' : 'warn';
+  html += `
+    <div class="sum-label">Σ Weights</div>
+    <div></div>
+    <div class="center num sum-cell ${okClass}">${(wsum||0).toFixed(2)}</div>
+    ${['','','',''].map(()=>`<div></div>`).join('')}${['','','',''].map(()=>`<div></div>`).join('')}${['','','',''].map(()=>`<div></div>`).join('')}
+  `;
+
+  // totals
+  const totals = {VN:0, SG:0, MY:0, ID:0};
+  const mapKey = {Vietnam:'VN', Singapore:'SG', Malaysia:'MY', Indonesia:'ID'};
+  for(const kpi of kpis){
+    const norm = normalize(kpi.values, kpi.direction);
+    for(const c of countries){ totals[mapKey[c]] += norm[c]*kpi.weight; }
+  }
+  scoreGrid.innerHTML = html;
+
+  document.getElementById('tw_vn').textContent = fmtFixed(+totals.VN,2);
+  document.getElementById('tw_sg').textContent = fmtFixed(+totals.SG,2);
+  document.getElementById('tw_my').textContent = fmtFixed(+totals.MY,2);
+  document.getElementById('tw_id').textContent = fmtFixed(+totals.ID,2);
+
+  const att = {'Vietnam': totals.VN*100,'Singapore': totals.SG*100,'Malaysia': totals.MY*100,'Indonesia': totals.ID*100};
+  state._scorecardTotals = att;
+
+  document.getElementById('att_all').textContent =
+    `${fmtFixed(att['Vietnam'],2)} | ${fmtFixed(att['Singapore'],2)} | ${fmtFixed(att['Malaysia'],2)} | ${fmtFixed(att['Indonesia'],2)}`;
+
+  const ranks = ranksFromScores(att);
+  document.getElementById('rankScore').innerHTML =
+    Object.entries(ranks).map(([c,r])=>`<div>${c}: <strong>${r}</strong></div>`).join('');
+
+  drawBarsAnimated('chartScore', att, {decimals:2});
+  drawTornado();
+
+  const wsumEl = document.getElementById('scoreWeightSum');
+  const sumChip = document.getElementById('sumChip');
+  wsumEl.textContent = (wsum||0).toFixed(2);
+  sumChip.classList.remove('ok','bad');
+  if(Math.abs(wsum-1)<1e-6){ sumChip.classList.add('ok'); } else { sumChip.classList.add('bad'); }
+}
+
+// Edit handlers (Scorecard)
+function commitScoreEdit(e){
+  const t = e.target;
+  const type = t.getAttribute('data-type');
+  if(!type || !type.startsWith('sc-')) return;
+  const idx = +t.getAttribute('data-idx');
+  if(type==='sc-w'){
+    state.scorecard.kpis[idx].weight = +(Number(t.value).toFixed(2));
+  } else if(type==='sc-dir'){
+    state.scorecard.kpis[idx].direction = t.value;
+  } else if(type==='sc-val'){
+    const c = t.getAttribute('data-country');
+    const unit = t.getAttribute('data-unit');
+    state.scorecard.kpis[idx].values[c] = parseByUnit(unit, t.value);
+  }
+  maybeSyncOnePageValues();
+  renderScorecard();
+  renderOnePage();
+  renderSignal();
+}
+scoreGrid.addEventListener('change', commitScoreEdit);
+scoreGrid.addEventListener('blur', (e)=> commitScoreEdit(e), true);
+scoreGrid.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' && e.target && e.target.getAttribute('data-type')?.startsWith('sc-')){
+    e.preventDefault(); e.target.blur();
+  }
+});
+document.getElementById('normalizeWeightsBtn').addEventListener('click', ()=>{
+  const kpis = state.scorecard.kpis; const s = kpis.reduce((a,k)=>a+(+k.weight||0),0)||1;
+  for(const k of kpis){ k.weight = +( ((+k.weight||0)/s).toFixed(2) ); }
+  renderScorecard(); renderOnePage(); renderSignal();
+});
+document.getElementById('resetScoreBtn').addEventListener('click', ()=>{
+  state.scorecard = deepCopy(scorecardData);
+  maybeSyncOnePageValues();
+  renderScorecard(); renderOnePage(); renderSignal();
+});
+
+/* ======= ONE-PAGE ======= */
+const oneSections = document.getElementById('oneSections');
+function renderOnePage(){
+  maybeSyncOnePageValues();
+  const {countries, sections} = state.onepage;
+  let html = '';
+
+  function sectionTable(secIdx, sec){
+    const head = `
+      <div class="group-head">${sec.section}</div>
+      <div class="h">Metric</div>
+      <div class="h center">Direction</div>
+      <div class="h center">Weight</div>
+      ${countries.map(c=>`<div class="h center">${c} – Value</div>`).join('')}
+      ${countries.map(c=>`<div class="h center">${c} – Norm</div>`).join('')}
+      ${countries.map(c=>`<div class="h center">${c} – Weighted</div>`).join('')}
+    `;
+    let rows = '';
+    sec.metrics.forEach((m, mi)=>{
+      const norm = normalize(m.values, m.direction);
+      const weights = Object.fromEntries(countries.map(c=>[c, norm[c]*(+m.weight||0)]));
+      const mapped = metricMap[m.metric];
+      const isSynced = state.sync && mapped && state.scorecard.kpis.find(k=>k.name===mapped);
+      rows += `
+        <div>${m.metric}${isSynced? ' <span class="badge">sync</span>':''}</div>
+        <div class="center">
+          <select data-type="op-dir" data-s="${secIdx}" data-i="${mi}" ${isSynced?'disabled':''}>
+            <option value="higher" ${m.direction==='higher'?'selected':''}>Higher</option>
+            <option value="lower" ${m.direction==='lower'?'selected':''}>Lower</option>
+          </select>
+        </div>
+        <div class="center">
+          <input class="tight" type="number" step="0.01" value="${(+m.weight).toFixed(2)}" data-type="op-w" data-s="${secIdx}" data-i="${mi}" />
+        </div>
+        ${countries.map(c=>{
+          const vDisplay = displayByUnit(m.unit, m.values[c]);
+          const unitChip = m.unit==='percent' ? '<span class="unit">%</span>' : '';
+          return `<div class="center"><div class="input-with-unit"><input class="tight" ${isSynced?'disabled':''} type="number" step="${stepByUnit(m.unit)}" value="${vDisplay}" data-type="op-val" data-s="${secIdx}" data-i="${mi}" data-unit="${m.unit}" data-country="${c}"/>${unitChip}</div></div>`;
+        }).join('')}
+        ${countries.map(c=>`<div class="center num">${fmtFixed((+norm[c]),2)}</div>`).join('')}
+        ${countries.map(c=>`<div class="center num">${fmtFixed((+weights[c]),2)}</div>`).join('')}
+      `;
+    });
+
+    const sumW = sec.metrics.reduce((a,m)=>a+(+m.weight||0),0);
+    const okClass = Math.abs(sumW-1)<1e-6 ? 'ok' : 'warn';
+    rows += `
+      <div class="sum-label">Σ Weights</div>
+      <div></div>
+      <div class="center num sum-cell ${okClass}">${(+sumW||0).toFixed(2)}</div>
+      ${['','','',''].map(()=>`<div></div>`).join('')}${['','','',''].map(()=>`<div></div>`).join('')}${['','','',''].map(()=>`<div></div>`).join('')}
+    `;
+
+    return head + rows;
+  }
+
+  html += '<div class="kpi-grid">';
+  sections.forEach((sec, si)=>{ html += sectionTable(si, sec); });
+  html += '</div>';
+
+  oneSections.innerHTML = html;
+
+  const mapKey = {Vietnam:'VN', Singapore:'SG', Malaysia:'MY', Indonesia:'ID'};
+  const idxBlock = {Size:{VN:0,SG:0,MY:0,ID:0}, Growth:{VN:0,SG:0,MY:0,ID:0}, Ease:{VN:0,SG:0,MY:0,ID:0}};
+  const weightSums = {Size:0, Growth:0, Ease:0};
+
+  for(const sec of sections){
+    const key = sec.section.startsWith('Ease')? 'Ease' : sec.section;
+    for(const m of sec.metrics){
+      const norm = normalize(m.values, m.direction);
+      weightSums[key] += (+m.weight||0);
+      for(const c of countries){ idxBlock[key][mapKey[c]] += norm[c]*(+m.weight||0); }
+    }
+  }
+  state._idxBlock = idxBlock; state._weightSums = weightSums;
+
+  const avg = o => (o.VN+o.SG+o.MY+o.ID)/4;
+  document.getElementById('idxSize').textContent = fmtFixed(avg(idxBlock.Size),2);
+  document.getElementById('idxGrowth').textContent = fmtFixed(avg(idxBlock.Growth),2);
+  document.getElementById('idxEase').textContent = fmtFixed(avg(idxBlock.Ease),2);
+
+  document.getElementById('sumSize').textContent = (weightSums.Size||0).toFixed(2);
+  document.getElementById('sumGrowth').textContent = (weightSums.Growth||0).toFixed(2);
+  document.getElementById('sumEase').textContent = (weightSums.Ease||0).toFixed(2);
+
+  drawSignalCharts();
+}
+
+/* Edit handlers (One-Page) */
+oneSections.addEventListener('change',(e)=> commitOneEdit(e));
+oneSections.addEventListener('blur',(e)=> commitOneEdit(e), true);
+oneSections.addEventListener('keydown',(e)=>{ if(e.key==='Enter' && e.target && e.target.getAttribute('data-type')?.startsWith('op-')){ e.preventDefault(); e.target.blur(); }});
+function commitOneEdit(e){
+  const t = e.target; const type = t.getAttribute('data-type');
+  if(!type || !type.startsWith('op-')) return;
+  const s = +t.getAttribute('data-s'); const i = +t.getAttribute('data-i');
+  const sec = state.onepage.sections[s]; const m = sec.metrics[i];
+  if(type==='op-w') m.weight = +(Number(t.value).toFixed(2));
+  else if(type==='op-dir') m.direction = t.value;
+  else if(type==='op-val'){ const c = t.getAttribute('data-country'); const unit = t.getAttribute('data-unit'); m.values[c] = parseByUnit(unit, t.value); }
+  renderOnePage(); renderSignal();
+}
+
+/* Normalize buttons */
+function normalizeBlockWeights(blockName){
+  const sec = state.onepage.sections.find(x=> x.section.startsWith(blockName));
+  if(!sec) return; const s = sec.metrics.reduce((a,m)=>a+(+m.weight||0),0)||1;
+  sec.metrics.forEach(m=> m.weight = +( ((+m.weight||0)/s).toFixed(2) ) );
+}
+document.getElementById('normalizeSizeBtn').addEventListener('click',()=>{ normalizeBlockWeights('Size'); renderOnePage(); renderSignal(); });
+document.getElementById('normalizeGrowthBtn').addEventListener('click',()=>{ normalizeBlockWeights('Growth'); renderOnePage(); renderSignal(); });
+document.getElementById('normalizeEaseBtn').addEventListener('click',()=>{ normalizeBlockWeights('Ease'); renderOnePage(); renderSignal(); });
+
+document.getElementById('resetOneBtn').addEventListener('click', ()=>{ state.onepage = deepCopy(onePageData); maybeSyncOnePageValues(); renderOnePage(); renderSignal(); });
+
+/* ======= Animated bar charts ======= */
+const previousSeriesCache = {};
+function drawBarsAnimated(canvasId, series, opts={}){
+  const decimals = opts.decimals ?? 2;
+  const cnv = document.getElementById(canvasId);
+  const ctx = cnv.getContext('2d');
+  const W = cnv.width = cnv.clientWidth * devicePixelRatio;
+  const H = cnv.height = cnv.clientHeight * devicePixelRatio;
+  const entries = Object.entries(series);
+  const max = Math.max(1e-6, ...entries.map(([,v])=>Math.abs(v)));
+  const pad = 30*devicePixelRatio;
+  const bw = (W - pad*2) / entries.length * 0.6;
+  const gap = (W - pad*2) / entries.length * 0.4;
+
+  const {bar:barColor, cat:catColor, val:valColor} = chartColors();
+
+  const cacheKey = canvasId;
+  const prev = previousSeriesCache[cacheKey] || Object.fromEntries(entries.map(([k])=>[k,0]));
+  const startVals = entries.map(([k]) => prev[k] ?? 0);
+  const endVals = entries.map(([,v]) => +v);
+
+  let t0; const dur = 600;
+  function frame(ts){
+    if(!t0) t0 = ts;
+    const p = Math.min(1, (ts-t0)/dur);
+    ctx.clearRect(0,0,W,H);
+    entries.forEach(([k,_], idx)=>{
+      const v = startVals[idx] + (endVals[idx]-startVals[idx]) * p;
+      const x = pad + idx*(bw+gap);
+      const h = (H - pad*2) * (v/max);
+      const y = H - pad - h;
+      ctx.fillStyle = barColor;
+      ctx.fillRect(x,y,bw,h);
+      ctx.textAlign = 'center'; ctx.font = `${12*devicePixelRatio}px sans-serif`;
+      ctx.fillStyle = catColor; ctx.fillText(k, x+bw/2, H-10*devicePixelRatio);
+      ctx.fillStyle = valColor;
+      const txt = (+v).toFixed(decimals);
+      ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.lineWidth=4; ctx.strokeText(txt, x+bw/2, Math.max(12*devicePixelRatio, y-6*devicePixelRatio));
+      ctx.fillText(txt, x+bw/2, Math.max(12*devicePixelRatio, y-6*devicePixelRatio));
+    });
+    if(p<1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  previousSeriesCache[cacheKey] = Object.fromEntries(entries.map(([k,v])=>[k,+v]));
+}
+
+/* ======= Signal charts (One-Page) ======= */
+function drawSignalCharts(){
+  if(!state._scorecardTotals) renderScorecard();
+  if(!state._idxBlock) return;
+
+  drawBarsAnimated('chartSigTotal', state._scorecardTotals, {decimals:2});
+
+  const mkSeries = (blk) => ({
+    'Vietnam': clamp01( (state._idxBlock[blk].VN) / (state._weightSums[blk]||1) ),
+    'Singapore': clamp01( (state._idxBlock[blk].SG) / (state._weightSums[blk]||1) ),
+    'Malaysia': clamp01( (state._idxBlock[blk].MY) / (state._weightSums[blk]||1) ),
+    'Indonesia': clamp01( (state._idxBlock[blk].ID) / (state._weightSums[blk]||1) ),
+  });
+
+  drawBarsAnimated('chartSigSize', mkSeries('Size'), {decimals:2});
+  drawBarsAnimated('chartSigGrowth', mkSeries('Growth'), {decimals:2});
+  drawBarsAnimated('chartSigEase', mkSeries('Ease'), {decimals:2});
+}
+
+/* ======= Sensitivity (Tornado) ======= */
+const sensCountrySel = document.getElementById('sensCountry');
+const tornadoLabelsEl = document.getElementById('tornadoLabels');
+
+function computeTotalsWithWeights(customWeights){
+  const countries = state.scorecard.countries;
+  const kpis = state.scorecard.kpis;
+  const totals = Object.fromEntries(countries.map(c=>[c,0]));
+  for(let i=0;i<kpis.length;i++){
+    const k = kpis[i];
+    const norm = normalize(k.values, k.direction);
+    const w = customWeights[i];
+    for(const c of countries){ totals[c] += norm[c]*w; }
+  }
+  const out = {}; for(const c of countries){ out[c] = totals[c]*100; } return out;
+}
+function tornadoData(country){
+  const kpis = state.scorecard.kpis;
+  const baseWeights = kpis.map(k=>+k.weight||0);
+  const sum = baseWeights.reduce((a,b)=>a+b,0)||1;
+  const w0 = baseWeights.map(x=>x/sum);
+
+  const baseTotals = computeTotalsWithWeights(w0);
+  const base = baseTotals[country];
+
+  const rows = kpis.map((k, i)=>{
+    let wUp = w0.slice(); wUp[i] = wUp[i]*1.10; const sUp = wUp.reduce((a,b)=>a+b,0)||1; wUp = wUp.map(x=>x/sUp);
+    const up = computeTotalsWithWeights(wUp)[country] - base;
+
+    let wDn = w0.slice(); wDn[i] = wDn[i]*0.90; const sDn = wDn.reduce((a,b)=>a+b,0)||1; wDn = wDn.map(x=>x/sDn);
+    const dn = base - computeTotalsWithWeights(wDn)[country];
+
+    const maxAbs = Math.max(Math.abs(up), Math.abs(dn));
+    return { kpi:k.name, up, dn, maxAbs };
+  });
+
+  rows.sort((a,b)=> b.maxAbs - a.maxAbs);
+  return rows.slice(0,12);
+}
+function drawTornado(){
+  const cnv = document.getElementById('chartTornado'); if(!cnv) return;
+  const ctx = cnv.getContext('2d');
+  const W = cnv.width = cnv.clientWidth * devicePixelRatio;
+  const H = cnv.height = cnv.clientHeight * devicePixelRatio;
+
+  const data = tornadoData(sensCountrySel.value || 'Vietnam');
+  const {up:UP, down:DOWN, axis:AXIS, val:VAL, grid:GRID} = chartColors();
+
+  // ===== Columna de etiquetas (fuera del canvas)
+  tornadoLabelsEl.innerHTML = '';
+  const rowsPx = (H / devicePixelRatio - 16) / data.length; // margen aprox
+  data.forEach(d=>{
+    const r = document.createElement('div');
+    r.className = 'row';
+    r.title = d.kpi;
+    r.style.height = `${rowsPx}px`;
+    r.textContent = d.kpi;
+    tornadoLabelsEl.appendChild(r);
+  });
+
+  // ===== Canvas (solo barras/valores)
+  const padLeft = 10*devicePixelRatio;   // labels están fuera
+  const padRight = 80*devicePixelRatio;
+  const padTop = 16*devicePixelRatio, padBottom = 20*devicePixelRatio;
+  const midX = padLeft + (W - padLeft - padRight)/2;
+
+  const rowH = (H - padTop - padBottom) / data.length;
+  const barH = rowH * 0.52;
+
+  const maxVal = Math.max(1e-6, ...data.map(d=>Math.max(Math.abs(d.up), Math.abs(d.dn))));
+
+  // bg grid banding
+  ctx.fillStyle = GRID;
+  for(let i=0;i<data.length;i+=2){
+    ctx.globalAlpha = 0.06;
+    ctx.fillRect(0, padTop+i*rowH, W, rowH);
+  }
+  ctx.globalAlpha = 1;
+
+  // axis central
+  ctx.strokeStyle = AXIS; ctx.lineWidth = 1*devicePixelRatio;
+  ctx.beginPath(); ctx.moveTo(midX, padTop-4*devicePixelRatio); ctx.lineTo(midX, H-padBottom+4*devicePixelRatio); ctx.stroke();
+
+  // filas
+  ctx.textBaseline='middle';
+  data.forEach((d, i)=>{
+    const cy = padTop + i*rowH + rowH/2;
+
+    const lenUp = (Math.abs(d.up)/maxVal) * (W - padLeft - padRight)/2;
+    const lenDn = (Math.abs(d.dn)/maxVal) * (W - padLeft - padRight)/2;
+
+    // izquierda (down)
+    ctx.fillStyle = DOWN;
+    ctx.fillRect(midX - lenDn, cy - barH/2, lenDn, barH);
+
+    // derecha (up)
+    ctx.fillStyle = UP;
+    ctx.fillRect(midX, cy - barH/2, lenUp, barH);
+
+    // valores
+    ctx.font = `${12*devicePixelRatio}px sans-serif`;
+    ctx.fillStyle = VAL; ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.lineWidth=4;
+
+    const upTxt = `+${d.up.toFixed(2)}`;
+    ctx.strokeText(upTxt, midX + lenUp + 6*devicePixelRatio, cy);
+    ctx.fillText(upTxt, midX + lenUp + 6*devicePixelRatio, cy);
+
+    const dnTxt = `-${d.dn.toFixed(2)}`;
+    ctx.textAlign='right';
+    ctx.strokeText(dnTxt, midX - lenDn - 6*devicePixelRatio, cy);
+    ctx.fillText(dnTxt, midX - lenDn - 6*devicePixelRatio, cy);
+    ctx.textAlign='left';
+  });
+}
+
+/* ======= SIGNAL CARDS ======= */
+const cardsGrid = document.getElementById('cardsGrid');
+function renderSignal(){
+  if(!state._scorecardTotals) renderScorecard();
+  if(!state._idxBlock) renderOnePage();
+
+  const totals = state._scorecardTotals || {};
+  const mapCode = {Vietnam:'VN', Singapore:'SG', Malaysia:'MY', Indonesia:'ID'};
+  const countries = Object.keys(totals);
+  const entries = countries.map(c=>[c, totals[c] || 0]).sort((a,b)=>b[1]-a[1]);
+  const ranks = {}; entries.forEach(([c,_],i)=> ranks[c]=i+1);
+
+  const normIdx = (country, blk) => {
+    const code = mapCode[country];
+    const w = state._weightSums?.[blk] || 1;
+    const raw = state._idxBlock?.[blk]?.[code] ?? 0;
+    return clamp01(raw / w);
+  };
+
+  let html = '';
+  entries.forEach(([c,score],i)=>{
+    const top = i===0 ? ' top' : '';
+    const s = normIdx(c,'Size')*100;
+    const g = normIdx(c,'Growth')*100;
+    const e = normIdx(c,'Ease')*100;
+
+    html += `
+      <div class="country-card${top}">
+        <div class="cc-head">
+          <div>${c.toUpperCase()}</div>
+          <div class="cc-rank">#${ranks[c]}</div>
+        </div>
+        <div class="cc-score${top?' top':''}">${fmtFixed(score,2)}</div>
+        <div class="meter">
+          <div class="label"><span>Size Index</span><span class="val">${s.toFixed(1)}</span></div>
+          <div class="bar"><span style="width:${s.toFixed(1)}%"></span></div>
+        </div>
+        <div class="meter">
+          <div class="label"><span>Growth Index</span><span class="val">${g.toFixed(1)}</span></div>
+          <div class="bar"><span style="width:${g.toFixed(1)}%"></span></div>
+        </div>
+        <div class="meter">
+          <div class="label"><span>Ease of Entry</span><span class="val">${e.toFixed(1)}</span></div>
+          <div class="bar"><span style="width:${e.toFixed(1)}%"></span></div>
+        </div>
+        <div class="cc-foot">Weighted total (0–100)</div>
+      </div>
+    `;
+  });
+  cardsGrid.innerHTML = html;
+}
+
+/* ======= KPI DEFINITIONS ======= */
+const defsTable = document.getElementById('defsTable');
+const defsSearch = document.getElementById('defsSearch');
+const defsCount = document.getElementById('defsCount');
+const defsMeta = document.getElementById('defsMeta');
+function renderDefinitions(q=""){
+  const query = q.trim().toLowerCase();
+  defsTable.querySelectorAll('.row.data').forEach(n=>n.remove());
+  const filtered = kpiDefinitions.filter(d=>{
+    if(!query) return true;
+    return [d.name,d.means,d.how,d.formula].some(v => (v||"").toLowerCase().includes(query));
+  });
+  filtered.forEach(d=>{
+    const row = document.createElement('div'); row.className='row data';
+    row.innerHTML = `
+      <div class="td"><strong>${d.name}</strong></div>
+      <div class="td">${d.means}</div>
+      <div class="td">${d.how}</div>
+      <div class="td"><code>${d.formula||""}</code></div>
+    `;
+    defsTable.appendChild(row);
+  });
+  defsCount.textContent = String(filtered.length);
+  defsMeta.textContent = query ? `Showing ${filtered.length} of ${kpiDefinitions.length} KPIs for “${q}”.` : `Showing ${filtered.length} KPIs.`;
+}
+defsSearch?.addEventListener('input', (e)=> renderDefinitions(e.target.value));
+
+/* ======= Tabs, Theme, Sync, Scenario UI ======= */
+const tabScore = document.getElementById('tabScore');
+const tabOne = document.getElementById('tabOne');
+const tabSignal = document.getElementById('tabSignal');
+const tabDefs = document.getElementById('tabDefs');
+const tabAI = document.getElementById('tabAI');
+
+const scorePanel = document.getElementById('scorecardPanel');
+const onePanel = document.getElementById('onePanel');
+const signalPanel = document.getElementById('signalPanel');
+const defsPanel = document.getElementById('defsPanel');
+const aiPanel = document.getElementById('aiPanel');
+
+function showTab(which){
+  const isScore = which==='score';
+  const isOne = which==='one';
+  const isSignal = which==='signal';
+  const isDefs = which==='defs';
+  const isAI = which==='ai';
+  scorePanel.hidden = !isScore;
+  onePanel.hidden = !isOne;
+  signalPanel.hidden = !isSignal;
+  defsPanel.hidden = !isDefs;
+  aiPanel.hidden = !isAI;
+  tabScore.setAttribute('aria-selected', isScore);
+  tabOne.setAttribute('aria-selected', isOne);
+  tabSignal.setAttribute('aria-selected', isSignal);
+  tabDefs.setAttribute('aria-selected', isDefs);
+  tabAI.setAttribute('aria-selected', isAI);
+  if(isSignal) renderSignal();
+  if(isOne) drawSignalCharts();
+  if(isDefs) renderDefinitions(defsSearch?.value||"");
+  if(isScore) drawTornado();
+}
+tabScore.addEventListener('click', ()=> showTab('score'));
+tabOne.addEventListener('click', ()=> showTab('one'));
+tabSignal.addEventListener('click', ()=> showTab('signal'));
+tabDefs.addEventListener('click', ()=> showTab('defs'));
+tabAI.addEventListener('click', ()=> showTab('ai'));
+
+document.getElementById('syncToggle').addEventListener('change',(e)=>{
+  state.sync = e.target.checked; maybeSyncOnePageValues(); renderScorecard(); renderOnePage(); renderSignal();
+});
+document.getElementById('themeToggle').addEventListener('click', ()=>{
+  const root = document.documentElement;
+  const isLight = root.getAttribute('data-theme') === 'light';
+  root.setAttribute('data-theme', isLight ? 'dark' : 'light');
+  document.getElementById('themeToggle').textContent = isLight ? 'Switch to Light' : 'Switch to Dark';
+  renderScorecard(); drawSignalCharts(); drawTornado(); renderDefinitions(defsSearch?.value||"");
+});
+document.getElementById('printBtn').addEventListener('click', ()=> window.print());
+document.getElementById('shareBtn').addEventListener('click', async ()=>{
+  const link = shareLinkFromState();
+  try{ await navigator.clipboard.writeText(link); alert('Share link copied to clipboard!'); }
+  catch(_){ prompt('Copy this link:', link); }
+});
+scenarioSelect.addEventListener('change', (e)=>{
+  const name = e.target.value;
+  if(name && name!=='(Unsaved)' && !name.startsWith('──')){ loadScenario(name); }
+});
+document.getElementById('saveScenarioBtn').addEventListener('click', ()=>{
+  const name = scenarioSelect.value && !scenarioSelect.value.startsWith('──') ? scenarioSelect.value : state.scenario.currentName;
+  const finalName = name && name!=='(Unsaved)' ? name : (prompt('Scenario name:','Baseline')||'Baseline');
+  if(finalName) saveScenario(finalName);
+});
+document.getElementById('saveAsScenarioBtn').addEventListener('click', ()=>{
+  const name = prompt('Save as (new scenario name):','Scenario '+new Date().toLocaleString());
+  if(name) saveScenario(name);
+});
+document.getElementById('deleteScenarioBtn').addEventListener('click', ()=>{
+  const name = scenarioSelect.value; if(!name || name==='(Unsaved)' || name.startsWith('──')) return;
+  if(confirm(`Delete scenario “${name}”?`)){ deleteScenario(name); refreshScenarioSelect(); }
+});
+sensCountrySel.addEventListener('change', drawTornado);
+
+/* ======= AI Advisor (simple client) ======= */
+const aiEndpointEl = document.getElementById('aiEndpoint');
+const aiUserEl = document.getElementById('aiUser');
+const aiPassEl = document.getElementById('aiPass');
+const aiRememberEl = document.getElementById('aiRemember');
+const aiSaveCredsBtn = document.getElementById('aiSaveCreds');
+const chatLogEl = document.getElementById('chatLog');
+const chatInputEl = document.getElementById('chatInput');
+const chatSendBtn = document.getElementById('chatSend');
+const chatResetBtn = document.getElementById('chatReset');
+const aiAttachEl = document.getElementById('aiAttach');
+
+const CREDS_KEY = 'aiCreds';
+function loadCreds(){
+  try{ const c = JSON.parse(localStorage.getItem(CREDS_KEY)||'null'); if(!c) return;
+    aiEndpointEl.value = c.endpoint || aiEndpointEl.value;
+    aiUserEl.value = c.user||''; aiPassEl.value = c.pass||''; aiRememberEl.checked = !!c.remember;
+  }catch(_){}
+}
+function saveCreds(){
+  if(!aiRememberEl.checked){ localStorage.removeItem(CREDS_KEY); alert('Credentials not stored.'); return; }
+  const c = {endpoint: aiEndpointEl.value.trim(), user: aiUserEl.value.trim(), pass: aiPassEl.value, remember:true};
+  localStorage.setItem(CREDS_KEY, JSON.stringify(c));
+  alert('Credentials saved locally.');
+}
+aiSaveCredsBtn.addEventListener('click', saveCreds);
+loadCreds();
+
+function chatAdd(role, text){
+  const div = document.createElement('div');
+  div.className = 'msg ' + (role==='user' ? 'user' : 'ai');
+  div.textContent = text;
+  chatLogEl.appendChild(div);
+  chatLogEl.scrollTop = chatLogEl.scrollHeight;
+}
+chatResetBtn.addEventListener('click', ()=>{ chatLogEl.innerHTML=''; });
+
+function buildAIContext(){
+  const totals = state._scorecardTotals || {};
+  const ranks = ranksFromScores(totals);
+  const blocks = state._idxBlock || {};
+  const sums = state._weightSums || {};
+  const kpis = state.scorecard.kpis.map(k=>({
+    name:k.name, unit:k.unit, dir:k.direction, weight:+k.weight,
+    values:k.values
+  }));
+  return {
+    scenario: state.scenario.currentName,
+    countries: state.scorecard.countries,
+    totals_0_100: totals,
+    ranks,
+    block_indices_normalized: {
+      Size: sums.Size ? Object.fromEntries(['VN','SG','MY','ID'].map(code=>[code, (blocks.Size?.[code]||0)/sums.Size])) : {},
+      Growth: sums.Growth ? Object.fromEntries(['VN','SG','MY','ID'].map(code=>[code, (blocks.Growth?.[code]||0)/sums.Growth])) : {},
+      Ease: sums.Ease ? Object.fromEntries(['VN','SG','MY','ID'].map(code=>[code, (blocks.Ease?.[code]||0)/sums.Ease])) : {}
+    },
+    kpis
+  };
+}
+
+async function callNetlifyAI({endpoint, user, pass, prompt, context}){
+  const ctrl = new AbortController();
+  const timeout = setTimeout(()=>ctrl.abort(), 45000); // 45s timeout
+  try{
+    const res = await fetch(endpoint, {
+      method:'POST',
+      mode:'cors',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization': 'Basic ' + btoa(`${user}:${pass}`)
+      },
+      body: JSON.stringify({
+        mode: 'market-entry-advisor',
+        lang: 'es',
+        prompt,
+        context
+      }),
+      signal: ctrl.signal
+    });
+    if(!res.ok){
+      const txt = await res.text().catch(()=> '');
+      throw new Error(`HTTP ${res.status}${txt ? ' – '+txt.slice(0,200) : ''}`);
+    }
+    // si no es JSON, intenta parsear
+    let data = {};
+    try{ data = await res.json(); } catch(_){ data = {}; }
+    if(data && (data.ok===false || data.error)){ throw new Error(data.error || 'AI request failed'); }
+    return data.text || data.answer || data.result || JSON.stringify(data);
+  }catch(e){
+    if(e.name === 'AbortError') throw new Error('Timeout (no response in 45s)');
+    if(String(e.message||'').includes('Failed to fetch')){
+      // mensaje claro de CORS / red
+      throw new Error('Failed to fetch (revisa CORS del endpoint, HTTPS y que no sea mixed-content)');
+    }
+    throw e;
+  }finally{
+    clearTimeout(timeout);
+  }
+}
+
+chatSendBtn.addEventListener('click', async ()=>{
+  const endpoint = aiEndpointEl.value.trim();
+  const user = aiUserEl.value.trim();
+  const pass = aiPassEl.value;
+  const prompt = chatInputEl.value.trim();
+  if(!endpoint || !user || !pass || !prompt){ alert('Please fill endpoint, user, password and message.'); return; }
+
+  chatAdd('user', prompt);
+  chatInputEl.value='';
+
+  const attach = aiAttachEl.checked;
+  const context = attach ? buildAIContext() : undefined;
+
+  try{
+    const reply = await callNetlifyAI({endpoint, user, pass, prompt, context});
+    chatAdd('ai', reply);
+  }catch(e){
+    chatAdd('ai', '⚠️ Error calling AI: '+e.message);
+  }
+});
+
+/* ======= Init ======= */
+function handleResize(){ // re-dibuja para evitar cualquier blur/overlap al redimensionar
+  renderScorecard(); renderOnePage(); renderSignal(); drawTornado(); drawSignalCharts();
+}
+const loadedFromLink = tryLoadFromHash();
+refreshScenarioSelect();
+maybeSyncOnePageValues();
+renderScorecard();
+renderOnePage();
+renderSignal();
+renderDefinitions();
+drawTornado();
+window.addEventListener('resize', ()=>{ clearTimeout(window.__rz); window.__rz=setTimeout(handleResize, 150); });
+</script>
+</body>
+</html>
