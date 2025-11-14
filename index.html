@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es" data-theme="dark">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -58,6 +58,11 @@
 
     .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
     .grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
+    /* Score row now dedicates last column to the tornado chart */
+    .grid-3.tornado-row{grid-template-columns:minmax(260px,0.9fr) minmax(260px,0.9fr) minmax(420px,1.4fr); align-items:stretch}
+    @media (max-width:1200px){
+      .grid-3.tornado-row{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));}
+    }
     .center{text-align:center}
     .num{font-variant-numeric:tabular-nums}
 
@@ -97,6 +102,11 @@
     [data-theme="light"] .pill{background:#eef2ff}
 
     .note{font-size:12px; color:var(--ink-dim)}
+
+    .tornado-notes{display:grid; gap:10px; margin-top:12px; grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+    .tornado-notes h4{margin:0; font-size:13px; color:var(--ink-dim); letter-spacing:.08em}
+    .tornado-notes ul{margin:6px 0 0; padding-left:18px; color:var(--ink); font-size:13px; line-height:1.5}
+    .quick-notes-card{margin-top:16px}
 
     .cards-title{font-weight:900; letter-spacing:.15em; color:#c5ccff; margin:4px 0 12px}
     [data-theme="light"] .cards-title{color:#646bff}
@@ -169,7 +179,7 @@
     <header>
       <div>
         <h1>Attractiveness Scorecard – Interactive</h1>
-        <div class="subtitle">Edita <em>inputs</em>, <em>weights</em> y <em>direction</em>. Scenarios, sensitivity & AI advisor incluidos.</div>
+        <div class="subtitle">Tweak <em>inputs</em>, <em>weights</em> and <em>direction</em>. Scenarios, sensitivity & AI advisor included.</div>
       </div>
       <div class="scenario-wrap">
         <div class="pill"><label><input id="syncToggle" type="checkbox" checked> Sync common values across tabs</label></div>
@@ -197,7 +207,7 @@
         <button class="btn" id="normalizeWeightsBtn">Normalize weights to 1</button>
         <button class="btn alt" id="resetScoreBtn">Reset tab</button>
         <span class="chip status" id="sumChip">Sum of weights: <b id="scoreWeightSum">0.00</b></span>
-        <span class="note">Min–max normalization per KPI; para <em>Lower</em>: (max − x)/(max − min). Si max=min, normalized=0.</span>
+        <span class="note">Min–max normalization per KPI; for <em>Lower</em>: (max − x)/(max − min). If max=min then normalized = 0.</span>
       </div>
 
       <div class="card scrollwrap">
@@ -212,11 +222,17 @@
         <div class="pill">Attractiveness (0–100): <b class="num" id="att_all">—</b></div>
       </div>
 
-      <div class="grid-3" style="margin-top:16px">
+      <div class="grid-3 tornado-row" style="margin-top:16px">
         <div class="card">
           <strong>Ranking (Scorecard)</strong>
           <div id="rankScore" style="margin-top:8px"></div>
           <canvas id="chartScore"></canvas>
+        </div>
+
+        <div class="card">
+          <strong>Drivers & drags</strong>
+          <div class="note" id="tornadoCountryCopy">KPI impact when weights shift for Vietnam</div>
+          <div id="tornadoInsights" class="tornado-notes"></div>
         </div>
 
         <!-- ===== Sensitivity (Tornado) ===== -->
@@ -232,19 +248,19 @@
               </select>
             </label>
           </div>
-          <!-- Altura mayor para respiración de textos -->
-          <canvas id="chartTornado" style="height:480px"></canvas>
+          <!-- Extra height so labels never feel cramped -->
+          <canvas id="chartTornado" style="height:500px"></canvas>
           <div class="note">Bars show score change if a KPI weight rises (right) or falls (left) by 10%, keeping Σweights = 1.</div>
         </div>
+      </div>
 
-        <div class="card">
-          <strong>Quick notes</strong>
-          <ul>
-            <li>Use <em>Scenarios</em> para guardar/recuperar supuestos.</li>
-            <li>Sensitivity indica qué KPIs mueven más el score.</li>
-            <li>“Share link” copia una URL con el estado actual embebido.</li>
-          </ul>
-        </div>
+      <div class="card quick-notes-card">
+        <strong>Quick notes</strong>
+        <ul>
+          <li>Use <em>Scenarios</em> to save and reload your assumptions.</li>
+          <li>Drivers & drags list the KPIs that move the score the most.</li>
+          <li>“Share link” copies a URL with the full state embedded.</li>
+        </ul>
       </div>
     </section>
 
@@ -276,15 +292,15 @@
         <div class="card">
           <strong>Notes</strong>
           <ul style="margin-top:8px">
-            <li>Cada índice es Σ(normalized × weight) del bloque.</li>
-            <li>Weights y % con 2 decimales.</li>
+            <li>Each index = Σ(normalized × weight) inside that block.</li>
+            <li>Weights & percentages show 2 decimals.</li>
           </ul>
         </div>
         <div class="card">
           <strong>Tips</strong>
           <ul style="margin-top:8px">
-            <li>Cambia a <em>Light</em> para imprimir mejor.</li>
-            <li>Usa “Print” para exportar One-Page como PDF.</li>
+            <li>Switch to <em>Light</em> for printer-friendly colors.</li>
+            <li>Use “Print” to export the One-Page as PDF.</li>
           </ul>
         </div>
       </div>
@@ -358,14 +374,14 @@
           </label>
           <label><input id="aiRemember" type="checkbox" /> Remember credentials in this browser</label>
           <button class="btn" id="aiSaveCreds">Save</button>
-          <div class="note">Tu prompt puede incluir búsquedas web (opcional). Activa “Attach data” para enviar el estado (countries, KPIs, weights, indices & rankings).</div>
-          <div id="aiFileWarning" class="chip status bad" style="display:none">Estás ejecutando desde <b>file://</b>. Sirve la página por HTTPS para evitar CORS.</div>
+          <div class="note">Your prompt can include web search instructions (optional). Enable “Attach data” to send the current state (countries, KPIs, weights, indices & rankings).</div>
+          <div id="aiFileWarning" class="chip status bad" style="display:none">You are running from <b>file://</b>. Serve the page over HTTPS to avoid CORS issues.</div>
         </div>
 
         <div class="card chat">
           <div class="chat-log" id="chatLog" aria-live="polite"></div>
           <div class="chat-controls">
-            <textarea id="chatInput" placeholder="Pregunta a la IA sobre market entry: drivers, pesos, riesgos…"></textarea>
+            <textarea id="chatInput" placeholder="Ask the advisor about market entry: drivers, weights, risks…"></textarea>
             <div style="display:grid; gap:8px; align-items:flex-start">
               <label style="font-size:12px; color:var(--ink-dim)"><input type="checkbox" id="aiAttach" checked/> Attach data</label>
               <button class="btn" id="chatSend">Send</button>
@@ -427,6 +443,9 @@ const onePageData = {
   ]
 };
 
+const COUNTRY_CODE = { Vietnam:'VN', Singapore:'SG', Malaysia:'MY', Indonesia:'ID' };
+const codeForCountry = (name='') => COUNTRY_CODE[name] || name.slice(0,2).toUpperCase();
+
 /* KPI definitions (sample inline) */
 const kpiDefinitions = [
   {"name":"Total market value in convenience stores","means":"Total sales value over the last 12 months in the convenience store channel.","how":"Use NIQ Retail Measurement Services to extract market value for convenience stores by country.","formula":"(Input value – no formula)"},
@@ -479,6 +498,21 @@ function parseByUnit(unit, inputVal){
   }
 }
 const clamp01 = x => Math.max(0, Math.min(1, x));
+function roundedRectPath(ctx, x, y, w, h, r){
+  if(!ctx || w<=0 || h<=0) return;
+  const radius = Math.max(0, Math.min(r, Math.min(w, h)/2));
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + w - radius, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+  ctx.lineTo(x + w, y + h - radius);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+  ctx.lineTo(x + radius, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
 function normalize(valuesByCountry, direction){
   const entries = Object.entries(valuesByCountry);
   const vals = entries.map(([_,v]) => +v);
@@ -502,7 +536,7 @@ function ranksFromScores(scores){
   return rankMap;
 }
 function getTheme(){ return document.documentElement.getAttribute('data-theme')==='light' ? 'light' : 'dark'; }
-/* Paleta con halo para legibilidad */
+/* Palette with halo for readability */
 function chartColors(){
   const isLight = getTheme()==='light';
   return {
@@ -854,6 +888,7 @@ function drawBarsAnimated(canvasId, series, opts={}){
   const gap = (W - pad*2) / entries.length * 0.4;
 
   const {bar:barColor, cat:catColor, val:valColor, halo} = chartColors();
+  const isDark = getTheme()==='dark';
 
   const cacheKey = canvasId;
   const prev = previousSeriesCache[cacheKey] || Object.fromEntries(entries.map(([k])=>[k,0]));
@@ -873,20 +908,22 @@ function drawBarsAnimated(canvasId, series, opts={}){
       ctx.fillStyle = barColor;
       ctx.fillRect(x,y,bw,h);
 
-      // categorías
+    // categories
       ctx.textAlign = 'center';
       ctx.font = `${12*devicePixelRatio}px sans-serif`;
       ctx.fillStyle = catColor; 
       ctx.fillText(k, x+bw/2, H-10*devicePixelRatio);
 
-      // valor con halo para contraste
+      // draw halo around values for contrast in dark mode
       const txt = (+v).toFixed(decimals);
       ctx.font = `600 ${12*devicePixelRatio}px sans-serif`;
-      ctx.strokeStyle = halo;
-      ctx.lineWidth = (getTheme()==='light' ? 3 : 4) * devicePixelRatio;
-      ctx.lineJoin = 'round';
       const ty = Math.max(12*devicePixelRatio, y-6*devicePixelRatio);
-      ctx.strokeText(txt, x+bw/2, ty);
+      if(isDark){
+        ctx.strokeStyle = halo;
+        ctx.lineWidth = 4 * devicePixelRatio;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(txt, x+bw/2, ty);
+      }
       ctx.fillStyle = valColor;
       ctx.fillText(txt, x+bw/2, ty);
     });
@@ -917,6 +954,8 @@ function drawSignalCharts(){
 
 /* ======= Sensitivity (Tornado) ======= */
 const sensCountrySel = document.getElementById('sensCountry');
+const tornadoCountryCopy = document.getElementById('tornadoCountryCopy');
+const tornadoInsightsEl = document.getElementById('tornadoInsights');
 function computeTotalsWithWeights(customWeights){
   const countries = state.scorecard.countries;
   const kpis = state.scorecard.kpis;
@@ -952,20 +991,52 @@ function tornadoData(country){
   rows.sort((a,b)=> b.maxAbs - a.maxAbs);
   return rows.slice(0,12);
 }
+function renderTornadoInsights(rows, country){
+  if(!tornadoInsightsEl) return;
+  if(tornadoCountryCopy){
+    tornadoCountryCopy.textContent = `KPI impact when weights shift for ${country}`;
+  }
+  const lifts = rows.filter(r=>r.up!==0).sort((a,b)=>Math.abs(b.up)-Math.abs(a.up)).slice(0,3);
+  const drops = rows.filter(r=>r.dn!==0).sort((a,b)=>Math.abs(b.dn)-Math.abs(a.dn)).slice(0,3);
+  const mkList = (list, type)=>{
+    if(!list.length) return '<li>No meaningful changes.</li>';
+    return list.map(item=>{
+      const val = type==='up'?item.up:item.dn;
+      const verb = type==='up' ? (val>=0 ? 'adds' : 'cuts') : (val>=0 ? 'reduces' : 'lifts');
+      return `<li><b>${item.kpi}</b>: ${verb} ${Math.abs(val).toFixed(2)} pts</li>`;
+    }).join('');
+  };
+  tornadoInsightsEl.innerHTML = `
+    <div>
+      <h4>Raising weight</h4>
+      <ul>${mkList(lifts,'up')}</ul>
+    </div>
+    <div>
+      <h4>Lowering weight</h4>
+      <ul>${mkList(drops,'dn')}</ul>
+    </div>
+  `;
+}
 function drawTornado(){
   const cnv = document.getElementById('chartTornado'); if(!cnv) return;
   const ctx = cnv.getContext('2d');
   const W = cnv.width = cnv.clientWidth * devicePixelRatio;
   const H = cnv.height = cnv.clientHeight * devicePixelRatio;
 
-  const data = tornadoData(sensCountrySel.value || 'Vietnam');
-  const {up:UP, down:DOWN, cat:CAT, axis:AXIS, val:VAL, grid:GRID, halo:HALO} = chartColors();
+  const country = sensCountrySel.value || 'Vietnam';
+  const data = tornadoData(country);
+  renderTornadoInsights(data, country);
+  const {up:UP, down:DOWN, cat:CAT, axis:AXIS, val:VAL, grid:GRID} = chartColors();
+  const isDark = getTheme()==='dark';
+
+  ctx.clearRect(0,0,W,H);
+  ctx.font = `${12*devicePixelRatio}px sans-serif`;
+  ctx.textBaseline = 'middle';
 
   // compute dynamic left pad based on label widths
-  ctx.font = `${12*devicePixelRatio}px sans-serif`;
   const labelMax = Math.max(...data.map(d => ctx.measureText(d.kpi.length>60? d.kpi.slice(0,57)+'…' : d.kpi).width));
-  const padLeft = Math.max(180*devicePixelRatio, labelMax + 28*devicePixelRatio);
-  const padRight = 96*devicePixelRatio;
+  const padLeft = Math.max(220*devicePixelRatio, labelMax + 64*devicePixelRatio);
+  const padRight = 110*devicePixelRatio;
   const padTop = 24*devicePixelRatio, padBottom = 24*devicePixelRatio;
   const midX = padLeft + (W - padLeft - padRight)/2;
 
@@ -973,6 +1044,34 @@ function drawTornado(){
   const barH = rowH * 0.52;
 
   const maxVal = Math.max(1e-6, ...data.map(d=>Math.max(Math.abs(d.up), Math.abs(d.dn))));
+
+  const labelBandFill = isDark ? 'rgba(6,10,26,0.9)' : 'rgba(255,255,255,0.92)';
+  const labelBandStroke = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(24,34,71,0.08)';
+  const tagBorder = isDark ? 'rgba(231,236,255,0.25)' : 'rgba(23,30,62,0.15)';
+  const tagUpFill = isDark ? 'rgba(59,210,142,0.18)' : 'rgba(26,127,55,0.14)';
+  const tagDownFill = isDark ? 'rgba(255,115,115,0.18)' : 'rgba(210,38,38,0.12)';
+
+  const drawValueBubble = (text, align, anchorX, anchorY, fill)=>{
+    ctx.save();
+    ctx.font = `${12*devicePixelRatio}px sans-serif`;
+    ctx.textBaseline = 'middle';
+    const metrics = ctx.measureText(text);
+    const padX = 8*devicePixelRatio;
+    const h = 18*devicePixelRatio;
+    const w = metrics.width + padX*2;
+    const x = align==='left' ? anchorX : anchorX - w;
+    const y = anchorY - h/2;
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = tagBorder;
+    ctx.lineWidth = devicePixelRatio;
+    roundedRectPath(ctx, x, y, w, h, 8*devicePixelRatio);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = VAL;
+    ctx.textAlign = 'left';
+    ctx.fillText(text, x + padX, anchorY);
+    ctx.restore();
+  };
 
   // bg grid banding
   ctx.fillStyle = GRID;
@@ -986,19 +1085,24 @@ function drawTornado(){
   ctx.strokeStyle = AXIS; ctx.lineWidth = 1*devicePixelRatio;
   ctx.beginPath(); ctx.moveTo(midX, padTop-4*devicePixelRatio); ctx.lineTo(midX, H-padBottom+4*devicePixelRatio); ctx.stroke();
 
-  // value style (halo para claridad)
-  ctx.strokeStyle = HALO;
-  ctx.lineWidth = (getTheme()==='light' ? 3 : 4) * devicePixelRatio;
-  ctx.lineJoin = 'round';
-
   // rows
   data.forEach((d, i)=>{
     const cy = padTop + i*rowH + rowH/2;
 
-    // label
+    // label background + text
     const label = d.kpi.length>60 ? d.kpi.slice(0,57)+'…' : d.kpi;
+    const labelBoxX = 12*devicePixelRatio;
+    const labelBoxW = padLeft - 32*devicePixelRatio;
+    const labelBoxH = Math.max(barH + 12*devicePixelRatio, rowH - 8*devicePixelRatio);
+    const labelBoxY = cy - labelBoxH/2;
+    ctx.fillStyle = labelBandFill;
+    roundedRectPath(ctx, labelBoxX, labelBoxY, labelBoxW, labelBoxH, 12*devicePixelRatio);
+    ctx.fill();
+    ctx.strokeStyle = labelBandStroke;
+    ctx.lineWidth = devicePixelRatio;
+    ctx.stroke();
     ctx.fillStyle = CAT; ctx.textAlign='right';
-    ctx.fillText(label, midX - 10*devicePixelRatio, cy);
+    ctx.fillText(label, padLeft - 20*devicePixelRatio, cy);
 
     // bars
     const lenUp = (Math.abs(d.up)/maxVal) * (W - padLeft - padRight)/2;
@@ -1012,17 +1116,12 @@ function drawTornado(){
     ctx.fillStyle = UP;
     ctx.fillRect(midX, cy - barH/2, lenUp, barH);
 
-    // values
-    ctx.fillStyle = VAL;
-    ctx.textAlign='left';
-    const upTxt = `+${d.up.toFixed(2)}`;
-    ctx.strokeText(upTxt, midX + lenUp + 6*devicePixelRatio, cy);
-    ctx.fillText(upTxt, midX + lenUp + 6*devicePixelRatio, cy);
+    // values with bubbles for readability
+    const upTxt = `${d.up>=0?'+':''}${d.up.toFixed(2)}`;
+    drawValueBubble(upTxt, 'left', midX + lenUp + 8*devicePixelRatio, cy, tagUpFill);
 
-    ctx.textAlign='right';
-    const dnTxt = `-${d.dn.toFixed(2)}`;
-    ctx.strokeText(dnTxt, midX - lenDn - 6*devicePixelRatio, cy);
-    ctx.fillText(dnTxt, midX - lenDn - 6*devicePixelRatio, cy);
+    const dnTxt = `-${Math.abs(d.dn).toFixed(2)}`;
+    drawValueBubble(dnTxt, 'right', midX - lenDn - 8*devicePixelRatio, cy, tagDownFill);
   });
 }
 
@@ -1033,13 +1132,12 @@ function renderSignal(){
   if(!state._idxBlock) renderOnePage();
 
   const totals = state._scorecardTotals || {};
-  const mapCode = {Vietnam:'VN', Singapore:'SG', Malaysia:'MY', Indonesia:'ID'};
   const countries = Object.keys(totals);
   const entries = countries.map(c=>[c, totals[c] || 0]).sort((a,b)=>b[1]-a[1]);
   const ranks = {}; entries.forEach(([c,_],i)=> ranks[c]=i+1);
 
   const normIdx = (country, blk) => {
-    const code = mapCode[country];
+    const code = codeForCountry(country);
     const w = state._weightSums?.[blk] || 1;
     const raw = state._idxBlock?.[blk]?.[code] ?? 0;
     return clamp01(raw / w);
@@ -1241,34 +1339,128 @@ function buildAIContext(){
   };
 }
 
-/* Cliente robusto con Basic Auth + timeout y mensajes claros */
-async function callNetlifyAI({endpoint, user, pass, prompt, context}){
-  const ctrl = new AbortController();
-  const to = setTimeout(()=>ctrl.abort(), 20000);
+function localAdvisorReply(prompt, context){
+  if(!state._scorecardTotals) renderScorecard();
+  if(!state._idxBlock) renderOnePage();
+  const totals = context?.totals_0_100 || state._scorecardTotals || {};
+  const entries = Object.entries(totals).filter(([,v])=>Number.isFinite(v)).sort((a,b)=>b[1]-a[1]);
+  if(!entries.length){
+    return 'Local advisor: no weighted totals available yet. Adjust a KPI or weight, then try again.';
+  }
+  const best = entries[0];
+  const runner = entries[1];
+  const laggard = entries[entries.length-1];
+  const leadTxt = runner ? ` (lead of ${(best[1]-runner[1]).toFixed(2)} pts)` : '';
+  const blockPct = (country, block)=>{
+    const code = codeForCountry(country);
+    const raw = state._idxBlock?.[block]?.[code] ?? 0;
+    const w = state._weightSums?.[block] || 1;
+    return clamp01(raw / w) * 100;
+  };
+  const focus = best[0];
+  const drivers = tornadoData(focus);
+  const liftText = drivers
+    .filter(r=>r.up!==0)
+    .sort((a,b)=>Math.abs(b.up)-Math.abs(a.up))
+    .slice(0,3)
+    .map(r=>`${r.kpi} (${r.up>=0?'+':''}${r.up.toFixed(2)})`)
+    .join('; ');
+  const dragText = drivers
+    .filter(r=>r.dn!==0)
+    .sort((a,b)=>Math.abs(b.dn)-Math.abs(a.dn))
+    .slice(0,3)
+    .map(r=>`${r.kpi} (-${Math.abs(r.dn).toFixed(2)})`)
+    .join('; ');
+  return [
+    'Local scorecard summary:',
+    `Top ranked: ${focus} (${fmtFixed(best[1],2)})${leadTxt}.`,
+    runner ? `Runner-up: ${runner[0]} (${fmtFixed(runner[1],2)}).` : '',
+    laggard && laggard[0]!==focus ? `Lowest score: ${laggard[0]} (${fmtFixed(laggard[1],2)}).` : '',
+    `Block strengths for ${focus}: Size ${blockPct(focus,'Size').toFixed(1)}, Growth ${blockPct(focus,'Growth').toFixed(1)}, Ease ${blockPct(focus,'Ease').toFixed(1)} (0–100).`,
+    liftText ? `Top lifts if weights rise: ${liftText}.` : '',
+    dragText ? `Biggest drags when weights fall: ${dragText}.` : '',
+    prompt ? `Prompt focus: “${prompt}”.` : ''
+  ].filter(Boolean).join('\n\n');
+}
 
+const CORS_PROXIES = [
+  { name:'corsproxy.io', apply:url=>`https://corsproxy.io/?${encodeURIComponent(url)}`, headers:{} },
+  { name:'thingproxy', apply:url=>`https://thingproxy.freeboard.io/fetch/${url}`, headers:{} },
+  { prefix:'https://proxy.cors.sh/', headers:{'x-cors-api-key':'temp_6f31f2aa-bridge'} },
+  { prefix:'https://cors.isomorphic-git.org/', headers:{} }
+];
+const friendlyFetchError = 'Failed to fetch. Check that the endpoint exposes HTTPS, allows CORS and that you are not running from file://. If local, serve with e.g. “npx serve”.';
+const isNetworkErr = (err) => err?.name === 'AbortError' || /Failed to fetch/i.test(err?.message || '');
+const normalizeEndpoint = (url) => {
+  if(!url) return url;
+  let out = url.trim();
+  if(!/^https?:\/\//i.test(out)){ out = 'https://'+out; }
+  if(location.protocol === 'https:' && out.startsWith('http://')){
+    out = 'https://' + out.slice(7);
+  }
+  return out;
+};
+const buildProxyUrl = (proxy, url) => {
+  if(!proxy || !url) return url;
+  if(typeof proxy.apply === 'function') return proxy.apply(url);
+  if(proxy.prefix){
+    return url.startsWith(proxy.prefix) ? url : proxy.prefix + url;
+  }
+  return url;
+};
+
+/* Hardened client with Basic Auth, timeout, HTTPS auto-upgrade and CORS proxy retries */
+async function callNetlifyAI({endpoint, user, pass, prompt, context}){
   const headers = { 'Content-Type':'application/json' };
   if(user || pass) headers['Authorization'] = 'Basic ' + btoa(`${user}:${pass}`);
+  const payload = JSON.stringify({ mode:'market-entry-advisor', lang:'en', prompt, context });
 
-  let res;
+  const doFetch = async (target, extraHeaders = {})=>{
+    const ctrl = new AbortController();
+    const to = setTimeout(()=>ctrl.abort(), 20000);
+    try{
+      const res = await fetch(target, {
+        method:'POST',
+        headers: {...headers, ...extraHeaders},
+        body: payload,
+        signal: ctrl.signal,
+        cache: 'no-store',
+        redirect: 'follow',
+        mode: 'cors'
+      });
+      clearTimeout(to);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const data = await res.json().catch(()=> ({}));
+      if(data && data.ok===false){ throw new Error(data.error || 'AI request failed'); }
+      return data.text || data.answer || data.result || JSON.stringify(data);
+    }catch(err){
+      clearTimeout(to);
+      throw err;
+    }
+  };
+
+  const sanitized = normalizeEndpoint(endpoint);
   try{
-    res = await fetch(endpoint, {
-      method:'POST',
-      headers,
-      body: JSON.stringify({ mode:'market-entry-advisor', lang:'es', prompt, context }),
-      signal: ctrl.signal,
-      cache: 'no-store',
-      redirect: 'follow'
-    });
+    return await doFetch(sanitized);
   }catch(err){
-    clearTimeout(to);
-    throw new Error('Failed to fetch. Revisa CORS del endpoint, que sea HTTPS y que no estés usando file://. Si es local, sirve con un servidor (p.ej. npx serve).');
+    if(isNetworkErr(err)){
+      let lastProxyErr = err;
+      for(const proxy of CORS_PROXIES){
+        try{
+          return await doFetch(buildProxyUrl(proxy, sanitized), proxy.headers);
+        }catch(proxyErr){
+          lastProxyErr = proxyErr;
+          if(!isNetworkErr(proxyErr)) throw proxyErr;
+        }
+      }
+      const msg = 'Could not reach the endpoint even after trying built-in HTTPS CORS helpers. Ensure it responds over HTTPS or enable CORS on your function.';
+      const errObj = new Error(msg);
+      errObj.code = 'AI_UNREACHABLE';
+      throw errObj;
+    }
+    if(/Failed to fetch/i.test(err.message||'')) throw new Error(friendlyFetchError);
+    throw err;
   }
-  clearTimeout(to);
-
-  if(!res.ok) throw new Error('HTTP '+res.status);
-  const data = await res.json().catch(()=> ({}));
-  if(data && data.ok===false){ throw new Error(data.error || 'AI request failed'); }
-  return data.text || data.answer || data.result || JSON.stringify(data);
 }
 
 chatSendBtn.addEventListener('click', async ()=>{
@@ -1276,7 +1468,7 @@ chatSendBtn.addEventListener('click', async ()=>{
   const user = aiUserEl.value.trim();
   const pass = aiPassEl.value;
   const prompt = chatInputEl.value.trim();
-  if(!endpoint || !prompt){ alert('Completa endpoint y mensaje. (User/Pass si tu función lo exige)'); return; }
+  if(!endpoint || !prompt){ alert('Fill the endpoint and your message. Include user/pass if your function requires it.'); return; }
 
   chatAdd('user', prompt);
   chatInputEl.value='';
@@ -1288,7 +1480,14 @@ chatSendBtn.addEventListener('click', async ()=>{
     const reply = await callNetlifyAI({endpoint, user, pass, prompt, context});
     chatAdd('ai', reply);
   }catch(e){
-    chatAdd('ai', '⚠️ Error calling AI: '+e.message);
+    if(e?.code === 'AI_UNREACHABLE'){
+      const fallback = localAdvisorReply(prompt, context);
+      chatAdd('ai', `⚠️ Remote AI unreachable after trying HTTPS + CORS helpers.
+
+${fallback}`);
+    }else{
+      chatAdd('ai', '⚠️ Error calling AI: '+e.message);
+    }
   }
 });
 
@@ -1302,7 +1501,7 @@ renderSignal();
 renderDefinitions();
 drawTornado();
 
-/* Aviso si se ejecuta en file:// (ayuda para CORS) */
+/* Notify users if running from file:// (helps debug CORS) */
 if(location.protocol === 'file:'){
   aiFileWarning.style.display = 'inline-flex';
 }
