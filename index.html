@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -11,13 +11,14 @@
       --bg:#0b1020; --panel:#121833; --muted:#1a2247; --ink:#e7ecff; --ink-dim:#aab2d8; --accent:#7c9cff; --good:#3bd28e; --warn:#ffcc66; --bad:#ff6b6b;
       --chip:#273065;
       --card-bg:#ffffff; --card-ink:#1b1e2e; --card-muted:#6b7296; --card-accent:#3a37ff;
-      --shadow:0 14px 34px rgba(0,0,0,.28);
+      /* Sombras suavizadas */
+      --shadow: 0 10px 24px rgba(0,0,0,.22), 0 1px 2px rgba(0,0,0,.10);
       --input-bg:#0e1430; --input-border:rgba(255,255,255,.15);
     }
     [data-theme="light"]{
       --bg:#f6f8ff; --panel:#ffffff; --muted:#eef1ff; --ink:#13162b; --ink-dim:#5a6186; --accent:#4252ff;
       --chip:#e6eaff; --card-bg:#ffffff; --card-ink:#1b1e2e; --card-muted:#6b7296; --card-accent:#3a37ff;
-      --shadow:0 14px 34px rgba(34,57,150,.15);
+      --shadow: 0 8px 22px rgba(34,57,150,.12), 0 1px 1px rgba(34,57,150,.06);
       --input-bg:#ffffff; --input-border:#d9def8;
     }
 
@@ -151,12 +152,6 @@
     @keyframes pop{from{transform:scale(.98); opacity:0} to{transform:scale(1); opacity:1}}
     @keyframes fadeup{from{transform:translateY(8px); opacity:0} to{transform:translateY(0); opacity:1}}
 
-    /* ===== Tornado layout (labels + canvas) ===== */
-    .tornado-wrap{display:grid; grid-template-columns:minmax(180px,36%) 1fr; gap:10px; align-items:stretch}
-    .tornado-labels{display:flex; flex-direction:column; gap:0; padding:6px 6px 6px 8px; font-size:12px; color:var(--ink-dim); border:1px solid rgba(255,255,255,.08); border-radius:12px; background:rgba(255,255,255,.03); overflow:auto}
-    [data-theme="light"] .tornado-labels{border-color:#e6eaff; background:#f7f9ff}
-    .tornado-labels .row{display:flex; align-items:center; justify-content:flex-end; text-align:right; padding:0 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; height:24px}
-
     /* ===== Print ===== */
     @media print {
       body { background:#fff !important; }
@@ -174,7 +169,7 @@
     <header>
       <div>
         <h1>Attractiveness Scorecard – Interactive</h1>
-        <div class="subtitle">Edit <em>inputs</em>, <em>weights</em> and <em>direction</em> directly. Scenarios, sensitivity & AI advisor included.</div>
+        <div class="subtitle">Edita <em>inputs</em>, <em>weights</em> y <em>direction</em>. Scenarios, sensitivity & AI advisor incluidos.</div>
       </div>
       <div class="scenario-wrap">
         <div class="pill"><label><input id="syncToggle" type="checkbox" checked> Sync common values across tabs</label></div>
@@ -202,7 +197,7 @@
         <button class="btn" id="normalizeWeightsBtn">Normalize weights to 1</button>
         <button class="btn alt" id="resetScoreBtn">Reset tab</button>
         <span class="chip status" id="sumChip">Sum of weights: <b id="scoreWeightSum">0.00</b></span>
-        <span class="note">Min–max normalization per KPI; for <em>Lower</em>: (max − x)/(max − min). If max=min, normalized=0.</span>
+        <span class="note">Min–max normalization per KPI; para <em>Lower</em>: (max − x)/(max − min). Si max=min, normalized=0.</span>
       </div>
 
       <div class="card scrollwrap">
@@ -237,22 +232,17 @@
               </select>
             </label>
           </div>
-
-          <!-- NUEVO: columna de etiquetas + canvas separado -->
-          <div class="tornado-wrap" style="margin-top:8px">
-            <div id="tornadoLabels" class="tornado-labels" aria-hidden="true"></div>
-            <canvas id="chartTornado" style="height:360px"></canvas>
-          </div>
-
+          <!-- Altura mayor para respiración de textos -->
+          <canvas id="chartTornado" style="height:480px"></canvas>
           <div class="note">Bars show score change if a KPI weight rises (right) or falls (left) by 10%, keeping Σweights = 1.</div>
         </div>
 
         <div class="card">
           <strong>Quick notes</strong>
           <ul>
-            <li>Use <em>Scenarios</em> to store and recall different assumptions.</li>
-            <li>Sensitivity shows which KPIs move the country score the most.</li>
-            <li>“Share link” copies a URL with the current state embedded.</li>
+            <li>Use <em>Scenarios</em> para guardar/recuperar supuestos.</li>
+            <li>Sensitivity indica qué KPIs mueven más el score.</li>
+            <li>“Share link” copia una URL con el estado actual embebido.</li>
           </ul>
         </div>
       </div>
@@ -286,15 +276,15 @@
         <div class="card">
           <strong>Notes</strong>
           <ul style="margin-top:8px">
-            <li>Each block index is Σ(normalized × weight) within its block.</li>
-            <li>Weights and % values use 2 decimals.</li>
+            <li>Cada índice es Σ(normalized × weight) del bloque.</li>
+            <li>Weights y % con 2 decimales.</li>
           </ul>
         </div>
         <div class="card">
           <strong>Tips</strong>
           <ul style="margin-top:8px">
-            <li>Toggle <em>Light</em> mode for a print-friendly palette.</li>
-            <li>Use “Print” to export One-Page as PDF.</li>
+            <li>Cambia a <em>Light</em> para imprimir mejor.</li>
+            <li>Usa “Print” para exportar One-Page como PDF.</li>
           </ul>
         </div>
       </div>
@@ -368,13 +358,14 @@
           </label>
           <label><input id="aiRemember" type="checkbox" /> Remember credentials in this browser</label>
           <button class="btn" id="aiSaveCreds">Save</button>
-          <div class="note">Your prompt can optionally include web searches. Toggle “Attach data” to send the current state (countries, KPIs, weights, indices & rankings).</div>
+          <div class="note">Tu prompt puede incluir búsquedas web (opcional). Activa “Attach data” para enviar el estado (countries, KPIs, weights, indices & rankings).</div>
+          <div id="aiFileWarning" class="chip status bad" style="display:none">Estás ejecutando desde <b>file://</b>. Sirve la página por HTTPS para evitar CORS.</div>
         </div>
 
         <div class="card chat">
           <div class="chat-log" id="chatLog" aria-live="polite"></div>
           <div class="chat-controls">
-            <textarea id="chatInput" placeholder="Ask the AI about market entry: drivers, weight suggestions, risks…"></textarea>
+            <textarea id="chatInput" placeholder="Pregunta a la IA sobre market entry: drivers, pesos, riesgos…"></textarea>
             <div style="display:grid; gap:8px; align-items:flex-start">
               <label style="font-size:12px; color:var(--ink-dim)"><input type="checkbox" id="aiAttach" checked/> Attach data</label>
               <button class="btn" id="chatSend">Send</button>
@@ -436,7 +427,7 @@ const onePageData = {
   ]
 };
 
-/* KPI definitions (sample inline; replace with your Excel-derived list if needed) */
+/* KPI definitions (sample inline) */
 const kpiDefinitions = [
   {"name":"Total market value in convenience stores","means":"Total sales value over the last 12 months in the convenience store channel.","how":"Use NIQ Retail Measurement Services to extract market value for convenience stores by country.","formula":"(Input value – no formula)"},
   {"name":"Value growth percentage (two-year compound annual growth)","means":"Average annual growth rate in sales value over two years.","how":"Compute compound annual growth using end value and value two years ago.","formula":"(@End_Value/@Value_2Y_Ago)^(1/2)-1"},
@@ -511,16 +502,18 @@ function ranksFromScores(scores){
   return rankMap;
 }
 function getTheme(){ return document.documentElement.getAttribute('data-theme')==='light' ? 'light' : 'dark'; }
+/* Paleta con halo para legibilidad */
 function chartColors(){
   const isLight = getTheme()==='light';
   return {
-    bar: isLight ? '#4252ff' : '#7c9cff',
-    cat: isLight ? '#5a6186' : '#aab2d8',
-    val: isLight ? '#0d1230' : '#e7ecff',
-    up:  isLight ? '#2ea44f' : '#3bd28e',
-    down:isLight ? '#cc4422' : '#ff7373',
-    axis:isLight ? '#9aa3c3' : '#7e86ad',
-    grid:isLight ? '#e6eaff' : '#1a2247'
+    bar:  isLight ? '#4A61FF' : '#7c9cff',
+    cat:  isLight ? '#5a6186' : '#aab2d8',
+    val:  isLight ? '#0b1020' : '#e7ecff',
+    up:   isLight ? '#1a7f37' : '#3bd28e',
+    down: isLight ? '#d22626' : '#ff7373',
+    axis: isLight ? '#b3bddb' : '#7e86ad',
+    grid: isLight ? '#eef2ff' : '#1a2247',
+    halo: isLight ? '#ffffff' : 'rgba(0,0,0,.35)'
   };
 }
 
@@ -731,7 +724,7 @@ document.getElementById('resetScoreBtn').addEventListener('click', ()=>{
   renderScorecard(); renderOnePage(); renderSignal();
 });
 
-/* ======= ONE-PAGE ======= */
+/* ======= ONE-Page ======= */
 const oneSections = document.getElementById('oneSections');
 function renderOnePage(){
   maybeSyncOnePageValues();
@@ -860,7 +853,7 @@ function drawBarsAnimated(canvasId, series, opts={}){
   const bw = (W - pad*2) / entries.length * 0.6;
   const gap = (W - pad*2) / entries.length * 0.4;
 
-  const {bar:barColor, cat:catColor, val:valColor} = chartColors();
+  const {bar:barColor, cat:catColor, val:valColor, halo} = chartColors();
 
   const cacheKey = canvasId;
   const prev = previousSeriesCache[cacheKey] || Object.fromEntries(entries.map(([k])=>[k,0]));
@@ -879,12 +872,23 @@ function drawBarsAnimated(canvasId, series, opts={}){
       const y = H - pad - h;
       ctx.fillStyle = barColor;
       ctx.fillRect(x,y,bw,h);
-      ctx.textAlign = 'center'; ctx.font = `${12*devicePixelRatio}px sans-serif`;
-      ctx.fillStyle = catColor; ctx.fillText(k, x+bw/2, H-10*devicePixelRatio);
-      ctx.fillStyle = valColor;
+
+      // categorías
+      ctx.textAlign = 'center';
+      ctx.font = `${12*devicePixelRatio}px sans-serif`;
+      ctx.fillStyle = catColor; 
+      ctx.fillText(k, x+bw/2, H-10*devicePixelRatio);
+
+      // valor con halo para contraste
       const txt = (+v).toFixed(decimals);
-      ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.lineWidth=4; ctx.strokeText(txt, x+bw/2, Math.max(12*devicePixelRatio, y-6*devicePixelRatio));
-      ctx.fillText(txt, x+bw/2, Math.max(12*devicePixelRatio, y-6*devicePixelRatio));
+      ctx.font = `600 ${12*devicePixelRatio}px sans-serif`;
+      ctx.strokeStyle = halo;
+      ctx.lineWidth = (getTheme()==='light' ? 3 : 4) * devicePixelRatio;
+      ctx.lineJoin = 'round';
+      const ty = Math.max(12*devicePixelRatio, y-6*devicePixelRatio);
+      ctx.strokeText(txt, x+bw/2, ty);
+      ctx.fillStyle = valColor;
+      ctx.fillText(txt, x+bw/2, ty);
     });
     if(p<1) requestAnimationFrame(frame);
   }
@@ -913,8 +917,6 @@ function drawSignalCharts(){
 
 /* ======= Sensitivity (Tornado) ======= */
 const sensCountrySel = document.getElementById('sensCountry');
-const tornadoLabelsEl = document.getElementById('tornadoLabels');
-
 function computeTotalsWithWeights(customWeights){
   const countries = state.scorecard.countries;
   const kpis = state.scorecard.kpis;
@@ -957,24 +959,14 @@ function drawTornado(){
   const H = cnv.height = cnv.clientHeight * devicePixelRatio;
 
   const data = tornadoData(sensCountrySel.value || 'Vietnam');
-  const {up:UP, down:DOWN, axis:AXIS, val:VAL, grid:GRID} = chartColors();
+  const {up:UP, down:DOWN, cat:CAT, axis:AXIS, val:VAL, grid:GRID, halo:HALO} = chartColors();
 
-  // ===== Columna de etiquetas (fuera del canvas)
-  tornadoLabelsEl.innerHTML = '';
-  const rowsPx = (H / devicePixelRatio - 16) / data.length; // margen aprox
-  data.forEach(d=>{
-    const r = document.createElement('div');
-    r.className = 'row';
-    r.title = d.kpi;
-    r.style.height = `${rowsPx}px`;
-    r.textContent = d.kpi;
-    tornadoLabelsEl.appendChild(r);
-  });
-
-  // ===== Canvas (solo barras/valores)
-  const padLeft = 10*devicePixelRatio;   // labels están fuera
-  const padRight = 80*devicePixelRatio;
-  const padTop = 16*devicePixelRatio, padBottom = 20*devicePixelRatio;
+  // compute dynamic left pad based on label widths
+  ctx.font = `${12*devicePixelRatio}px sans-serif`;
+  const labelMax = Math.max(...data.map(d => ctx.measureText(d.kpi.length>60? d.kpi.slice(0,57)+'…' : d.kpi).width));
+  const padLeft = Math.max(180*devicePixelRatio, labelMax + 28*devicePixelRatio);
+  const padRight = 96*devicePixelRatio;
+  const padTop = 24*devicePixelRatio, padBottom = 24*devicePixelRatio;
   const midX = padLeft + (W - padLeft - padRight)/2;
 
   const rowH = (H - padTop - padBottom) / data.length;
@@ -990,39 +982,47 @@ function drawTornado(){
   }
   ctx.globalAlpha = 1;
 
-  // axis central
+  // axis line
   ctx.strokeStyle = AXIS; ctx.lineWidth = 1*devicePixelRatio;
   ctx.beginPath(); ctx.moveTo(midX, padTop-4*devicePixelRatio); ctx.lineTo(midX, H-padBottom+4*devicePixelRatio); ctx.stroke();
 
-  // filas
-  ctx.textBaseline='middle';
+  // value style (halo para claridad)
+  ctx.strokeStyle = HALO;
+  ctx.lineWidth = (getTheme()==='light' ? 3 : 4) * devicePixelRatio;
+  ctx.lineJoin = 'round';
+
+  // rows
   data.forEach((d, i)=>{
     const cy = padTop + i*rowH + rowH/2;
 
+    // label
+    const label = d.kpi.length>60 ? d.kpi.slice(0,57)+'…' : d.kpi;
+    ctx.fillStyle = CAT; ctx.textAlign='right';
+    ctx.fillText(label, midX - 10*devicePixelRatio, cy);
+
+    // bars
     const lenUp = (Math.abs(d.up)/maxVal) * (W - padLeft - padRight)/2;
     const lenDn = (Math.abs(d.dn)/maxVal) * (W - padLeft - padRight)/2;
 
-    // izquierda (down)
+    // left (down)
     ctx.fillStyle = DOWN;
     ctx.fillRect(midX - lenDn, cy - barH/2, lenDn, barH);
 
-    // derecha (up)
+    // right (up)
     ctx.fillStyle = UP;
     ctx.fillRect(midX, cy - barH/2, lenUp, barH);
 
-    // valores
-    ctx.font = `${12*devicePixelRatio}px sans-serif`;
-    ctx.fillStyle = VAL; ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.lineWidth=4;
-
+    // values
+    ctx.fillStyle = VAL;
+    ctx.textAlign='left';
     const upTxt = `+${d.up.toFixed(2)}`;
     ctx.strokeText(upTxt, midX + lenUp + 6*devicePixelRatio, cy);
     ctx.fillText(upTxt, midX + lenUp + 6*devicePixelRatio, cy);
 
-    const dnTxt = `-${d.dn.toFixed(2)}`;
     ctx.textAlign='right';
+    const dnTxt = `-${d.dn.toFixed(2)}`;
     ctx.strokeText(dnTxt, midX - lenDn - 6*devicePixelRatio, cy);
     ctx.fillText(dnTxt, midX - lenDn - 6*devicePixelRatio, cy);
-    ctx.textAlign='left';
   });
 }
 
@@ -1191,6 +1191,7 @@ const chatInputEl = document.getElementById('chatInput');
 const chatSendBtn = document.getElementById('chatSend');
 const chatResetBtn = document.getElementById('chatReset');
 const aiAttachEl = document.getElementById('aiAttach');
+const aiFileWarning = document.getElementById('aiFileWarning');
 
 const CREDS_KEY = 'aiCreds';
 function loadCreds(){
@@ -1240,44 +1241,34 @@ function buildAIContext(){
   };
 }
 
+/* Cliente robusto con Basic Auth + timeout y mensajes claros */
 async function callNetlifyAI({endpoint, user, pass, prompt, context}){
   const ctrl = new AbortController();
-  const timeout = setTimeout(()=>ctrl.abort(), 45000); // 45s timeout
+  const to = setTimeout(()=>ctrl.abort(), 20000);
+
+  const headers = { 'Content-Type':'application/json' };
+  if(user || pass) headers['Authorization'] = 'Basic ' + btoa(`${user}:${pass}`);
+
+  let res;
   try{
-    const res = await fetch(endpoint, {
+    res = await fetch(endpoint, {
       method:'POST',
-      mode:'cors',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization': 'Basic ' + btoa(`${user}:${pass}`)
-      },
-      body: JSON.stringify({
-        mode: 'market-entry-advisor',
-        lang: 'es',
-        prompt,
-        context
-      }),
-      signal: ctrl.signal
+      headers,
+      body: JSON.stringify({ mode:'market-entry-advisor', lang:'es', prompt, context }),
+      signal: ctrl.signal,
+      cache: 'no-store',
+      redirect: 'follow'
     });
-    if(!res.ok){
-      const txt = await res.text().catch(()=> '');
-      throw new Error(`HTTP ${res.status}${txt ? ' – '+txt.slice(0,200) : ''}`);
-    }
-    // si no es JSON, intenta parsear
-    let data = {};
-    try{ data = await res.json(); } catch(_){ data = {}; }
-    if(data && (data.ok===false || data.error)){ throw new Error(data.error || 'AI request failed'); }
-    return data.text || data.answer || data.result || JSON.stringify(data);
-  }catch(e){
-    if(e.name === 'AbortError') throw new Error('Timeout (no response in 45s)');
-    if(String(e.message||'').includes('Failed to fetch')){
-      // mensaje claro de CORS / red
-      throw new Error('Failed to fetch (revisa CORS del endpoint, HTTPS y que no sea mixed-content)');
-    }
-    throw e;
-  }finally{
-    clearTimeout(timeout);
+  }catch(err){
+    clearTimeout(to);
+    throw new Error('Failed to fetch. Revisa CORS del endpoint, que sea HTTPS y que no estés usando file://. Si es local, sirve con un servidor (p.ej. npx serve).');
   }
+  clearTimeout(to);
+
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const data = await res.json().catch(()=> ({}));
+  if(data && data.ok===false){ throw new Error(data.error || 'AI request failed'); }
+  return data.text || data.answer || data.result || JSON.stringify(data);
 }
 
 chatSendBtn.addEventListener('click', async ()=>{
@@ -1285,7 +1276,7 @@ chatSendBtn.addEventListener('click', async ()=>{
   const user = aiUserEl.value.trim();
   const pass = aiPassEl.value;
   const prompt = chatInputEl.value.trim();
-  if(!endpoint || !user || !pass || !prompt){ alert('Please fill endpoint, user, password and message.'); return; }
+  if(!endpoint || !prompt){ alert('Completa endpoint y mensaje. (User/Pass si tu función lo exige)'); return; }
 
   chatAdd('user', prompt);
   chatInputEl.value='';
@@ -1302,9 +1293,6 @@ chatSendBtn.addEventListener('click', async ()=>{
 });
 
 /* ======= Init ======= */
-function handleResize(){ // re-dibuja para evitar cualquier blur/overlap al redimensionar
-  renderScorecard(); renderOnePage(); renderSignal(); drawTornado(); drawSignalCharts();
-}
 const loadedFromLink = tryLoadFromHash();
 refreshScenarioSelect();
 maybeSyncOnePageValues();
@@ -1313,7 +1301,11 @@ renderOnePage();
 renderSignal();
 renderDefinitions();
 drawTornado();
-window.addEventListener('resize', ()=>{ clearTimeout(window.__rz); window.__rz=setTimeout(handleResize, 150); });
+
+/* Aviso si se ejecuta en file:// (ayuda para CORS) */
+if(location.protocol === 'file:'){
+  aiFileWarning.style.display = 'inline-flex';
+}
 </script>
 </body>
 </html>
