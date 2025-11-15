@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -156,7 +156,7 @@
     .chat{display:flex; flex-direction:column; gap:10px; height:520px}
     .chat-log{flex:1; overflow:auto; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px; background:rgba(255,255,255,.03)}
     [data-theme="light"] .chat-log{border-color:#e6eaff; background:#f7f9ff}
-    .msg{padding:10px 12px; border-radius:12px; max-width:80%}
+    .msg{padding:10px 12px; border-radius:12px; max-width:80%; white-space:pre-wrap; line-height:1.45}
     .msg.user{align-self:flex-end; background:linear-gradient(180deg,#1c2452,#1a2147)}
     .msg.ai{align-self:flex-start; background:rgba(255,255,255,.06)}
     [data-theme="light"] .msg.user{background:#e8ecff}
@@ -206,7 +206,7 @@
         <button class="btn alt" id="deleteScenarioBtn">Delete</button>
         <button class="btn alt" id="shareBtn" title="Copy shareable link">Share link</button>
         <button class="btn alt" id="printBtn" title="Print One-Page">Print</button>
-        <button class="btn alt" id="themeToggle" title="Toggle light/clear mode">Switch to Light</button>
+        <button class="btn alt" id="themeToggle" title="Toggle light/clear mode">Switch to Dark</button>
       </div>
     </header>
 
@@ -567,6 +567,11 @@ function ranksFromScores(scores){
   return rankMap;
 }
 function getTheme(){ return document.documentElement.getAttribute('data-theme')==='light' ? 'light' : 'dark'; }
+function updateThemeToggleLabel(){
+  const btn = document.getElementById('themeToggle');
+  if(!btn) return;
+  btn.textContent = getTheme()==='light' ? 'Switch to Dark' : 'Switch to Light';
+}
 /* Palette with halo for readability */
 function chartColors(){
   const isLight = getTheme()==='light';
@@ -621,7 +626,10 @@ function hydrateState(snap){
   state.sync = !!snap.sync;
   state.scorecard = deepCopy(snap.scorecard || state.scorecard);
   state.onepage = deepCopy(snap.onepage || state.onepage);
-  if(snap.theme){ document.documentElement.setAttribute('data-theme', snap.theme); }
+  if(snap.theme){
+    document.documentElement.setAttribute('data-theme', snap.theme);
+  }
+  updateThemeToggleLabel();
 }
 function saveScenario(name){ localStorage.setItem(SC_PREFIX+name, JSON.stringify(snapshotState())); state.scenario.currentName = name; refreshScenarioSelect(); }
 function loadScenario(name){ const raw = localStorage.getItem(SC_PREFIX+name); if(!raw) return;
@@ -1284,7 +1292,7 @@ document.getElementById('themeToggle').addEventListener('click', ()=>{
   const root = document.documentElement;
   const isLight = root.getAttribute('data-theme') === 'light';
   root.setAttribute('data-theme', isLight ? 'dark' : 'light');
-  document.getElementById('themeToggle').textContent = isLight ? 'Switch to Light' : 'Switch to Dark';
+  updateThemeToggleLabel();
   renderScorecard(); drawSignalCharts(); drawTornado(); renderDefinitions(defsSearch?.value||"");
 });
 document.getElementById('printBtn').addEventListener('click', ()=> window.print());
@@ -1402,22 +1410,46 @@ async function fetchAdvisorNews(rawQuery){
     return;
   }
   newsStatusEl.textContent = `Searching headlines for “${query}”…`;
-  try{
+  const tryNetlify = async ()=>{
+    const resp = await fetch(`/.netlify/functions/news?query=${encodeURIComponent(query)}`, {cache:'no-store'});
+    if(!resp.ok) throw new Error('News API HTTP '+resp.status);
+    const data = await resp.json().catch(()=>null);
+    if(!data || data.ok===false) throw new Error(data?.error || 'News API error');
+    if(!Array.isArray(data.items)) throw new Error('News API malformed payload');
+    return data.items;
+  };
+  const tryRss = async ()=>{
     const rssUrl = `https://r.jina.ai/http://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
     const res = await fetch(rssUrl, {cache:'no-store'});
     if(!res.ok) throw new Error('HTTP '+res.status);
     const xmlText = await res.text();
     const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
-    const items = Array.from(doc.querySelectorAll('item')).slice(0, NEWS_MAX_ITEMS).map(item=>({
+    return Array.from(doc.querySelectorAll('item')).slice(0, NEWS_MAX_ITEMS).map(item=>({
       title:(item.querySelector('title')?.textContent||'').replace(/\s+/g,' ').trim(),
       link:(item.querySelector('link')?.textContent||'').trim(),
       source:(item.querySelector('source')?.textContent||'').trim(),
       pubDate:(item.querySelector('pubDate')?.textContent||'').trim(),
       snippet:stripHtml(item.querySelector('description')?.textContent||'').replace(/\s+/g,' ').trim()
     })).filter(h=>h.title);
+  };
+  try{
+    let sourceLabel = '';
+    let items = [];
+    try{
+      items = await tryNetlify();
+      sourceLabel = 'curated feed';
+    }catch(primaryErr){
+      console.warn('Primary news feed unavailable, trying RSS fallback', primaryErr);
+      items = await tryRss();
+      sourceLabel = 'RSS fallback';
+    }
     state.advisor.news = { query, items, fetchedAt:new Date().toISOString() };
     renderNewsList();
-    newsStatusEl.textContent = items.length ? `Showing ${items.length} headline(s) for “${query}”.` : `No headlines found for “${query}”.`;
+    if(items.length){
+      newsStatusEl.textContent = `Showing ${items.length} headline(s) for “${query}” (${sourceLabel}).`;
+    }else{
+      newsStatusEl.textContent = `No headlines found for “${query}”.`;
+    }
   }catch(err){
     console.error('News search failed', err);
     newsStatusEl.textContent = '⚠️ Unable to load headlines. Try again later or refine your query.';
@@ -1462,6 +1494,10 @@ function buildAIContext(){
     },
     kpis
   };
+  const brief = advisorInsightBrief();
+  if(brief){
+    ctx.advisor_brief = brief;
+  }
   if(aiAttachNewsEl?.checked){
     const news = state.advisor?.news;
     if(news?.items?.length){
@@ -1481,12 +1517,57 @@ function buildAIContext(){
 const CONSULTING_PRIMER = `You are a senior go-to-market advisor for convenience retail expansion in Southeast Asia. Blend quantitative insight with external signals. When headlines are provided, reference the source and date. Structure every answer in English using Markdown with the following sections:
 
 1. Executive summary – two to three sentences that synthesize attractiveness and decision outlook.
-2. Scorecard interpretation – highlight rank deltas, block strengths, and the KPIs that drive spreads.
+2. Scorecard interpretation – explain the "why" behind rank deltas, block strengths, and the KPIs that drive spreads.
 3. Risk & news watchlist – connect recent headlines to potential execution risks or enablers.
 4. Recommended next steps – concrete actions, diligence items, or scenario tests, each grounded in the provided data.
 5. Data appendix – mention any relevant weighted scores, indices, or KPI metrics cited.
 
-Be concise but consultative, mirroring the tone of a partner-level slide track.`;
+Use any provided advisor_brief to anchor your storyline but expand with your own perspective. Be concise yet consultative, mirroring the tone of a partner-level slide track.`;
+
+function advisorInsightBrief(){
+  if(!state._scorecardTotals) renderScorecard();
+  if(!state._idxBlock) renderOnePage();
+  const totals = state._scorecardTotals || {};
+  const entries = Object.entries(totals).filter(([,v])=>Number.isFinite(v)).sort((a,b)=>b[1]-a[1]);
+  if(!entries.length) return '';
+  const [focus] = entries;
+  const runner = entries[1];
+  const laggard = entries[entries.length-1];
+  const leadGap = runner ? focus[1]-runner[1] : null;
+  const blockPct = (country, block)=>{
+    const code = codeForCountry(country);
+    const raw = state._idxBlock?.[block]?.[code] ?? 0;
+    const w = state._weightSums?.[block] || 1;
+    return clamp01(raw / w) * 100;
+  };
+  const blockScores = {
+    Size: blockPct(focus[0], 'Size'),
+    Growth: blockPct(focus[0], 'Growth'),
+    Ease: blockPct(focus[0], 'Ease')
+  };
+  const blockOrder = Object.entries(blockScores).sort((a,b)=>b[1]-a[1]);
+  const heroBlock = blockOrder[0];
+  const weakBlock = blockOrder[blockOrder.length-1];
+  const drivers = tornadoData(focus[0]) || [];
+  const topLift = drivers.filter(r=>r.up!==0).sort((a,b)=>Math.abs(b.up)-Math.abs(a.up))[0];
+  const topDrag = drivers.filter(r=>r.dn!==0).sort((a,b)=>Math.abs(b.dn)-Math.abs(a.dn))[0];
+  const parts = [];
+  parts.push(`${focus[0]} leads at ${fmtFixed(focus[1],2)}${leadGap!=null?` (+${fmtFixed(leadGap,2)} vs ${runner[0]})`:''}.`);
+  if(heroBlock && weakBlock){
+    const weakTxt = weakBlock[0]!==heroBlock[0] ? ` while ${weakBlock[0]} trails at ${weakBlock[1].toFixed(1)}` : '';
+    parts.push(`${heroBlock[0]} is strongest (${heroBlock[1].toFixed(1)}/100)${weakTxt}.`);
+  }
+  if(topLift){
+    parts.push(`Upside lever: ${topLift.kpi} adds ${topLift.up>=0?'+':''}${topLift.up.toFixed(2)} pts when weighted up.`);
+  }
+  if(topDrag){
+    parts.push(`Fragile lever: deprioritizing ${topDrag.kpi} erodes ${Math.abs(topDrag.dn).toFixed(2)} pts.`);
+  }
+  if(laggard && laggard[0]!==focus[0]){
+    parts.push(`${laggard[0]} is the laggard at ${fmtFixed(laggard[1],2)}, implying a selective posture.`);
+  }
+  return parts.filter(Boolean).join(' ');
+}
 
 function localAdvisorReply(prompt, context){
   if(!state._scorecardTotals) renderScorecard();
@@ -1528,6 +1609,7 @@ function localAdvisorReply(prompt, context){
   if(liftList.length){ recs.push(`Prioritize diligence on ${liftList[0].split('(')[0].trim()} to amplify the current lead.`); }
   if(dragList.length){ recs.push(`Mitigate drag factors such as ${dragList[0].split('(')[0].trim()} through scenario testing or contingency investment.`); }
   if(laggard && laggard[0]!==focus){ recs.push(`Revisit the role of ${laggard[0]} in the portfolio; consider a defensive stance until weighted score lifts above ${fmtFixed(laggard[1],2)}.`); }
+  const narrative = advisorInsightBrief();
   return [
     '## Executive summary',
     `${focus} leads the attractiveness scorecard at ${fmtFixed(best[1],2)}${leadTxt}. ${runner ? `${runner[0]} trails but could close the gap via the highlighted upside levers.` : 'No close challenger is within immediate reach.'}`,
@@ -1536,6 +1618,7 @@ function localAdvisorReply(prompt, context){
     standings,
     '### Capability mix (normalized indices)',
     `${focus} shows ${blockSummary}`,
+    narrative ? `### Interpretation\n${narrative}` : '',
     liftList.length ? `### Priority levers\n${liftList.map(item=>`- ${item}`).join('\n')}` : '',
     dragList.length ? `### Risks & drags\n${dragList.map(item=>`- ${item}`).join('\n')}` : '',
     newsSection ? `### Headlines watchlist\n${newsSection}` : '',
@@ -1549,7 +1632,9 @@ const applyConsultingPrimer = (prompt='') => {
   if(!consultingPrimerEl || !consultingPrimerEl.checked){
     return trimmed;
   }
-  return `${CONSULTING_PRIMER}\n\nUser request:\n${trimmed}`.trim();
+  const brief = advisorInsightBrief();
+  const briefBlock = brief ? `\n\nScorecard brief:\n${brief}` : '';
+  return `${CONSULTING_PRIMER}${briefBlock}\n\nUser request:\n${trimmed}`.trim();
 };
 
 const CORS_PROXIES = [
@@ -1680,6 +1765,7 @@ renderOnePage();
 renderSignal();
 renderDefinitions();
 drawTornado();
+updateThemeToggleLabel();
 
 /* Notify users if running from file:// (helps debug CORS) */
 if(location.protocol === 'file:'){
