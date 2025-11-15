@@ -163,6 +163,18 @@
     [data-theme="light"] .msg.ai{background:#fff; border:1px solid #e8ecff}
     .chat-controls{display:flex; gap:10px; align-items:flex-start}
     .chat-controls textarea{flex:1; min-height:64px; background:var(--input-bg); color:var(--ink); border:1px solid var(--input-border); border-radius:10px; padding:8px 10px}
+    .ai-boost{margin-top:16px; padding-top:12px; border-top:1px solid rgba(255,255,255,.08); display:grid; gap:10px}
+    [data-theme="light"] .ai-boost{border-top-color:#e8ecff}
+    .ai-boost label{font-size:12px; color:var(--ink); display:flex; align-items:center; gap:6px}
+    .news-search{display:flex; gap:8px; flex-wrap:wrap}
+    .news-search input{flex:1; min-width:220px; background:var(--input-bg); border:1px solid var(--input-border); color:var(--ink); padding:6px 10px; border-radius:8px}
+    .news-list{list-style:none; margin:0; padding:0; display:grid; gap:8px; max-height:220px; overflow:auto}
+    .news-list li{background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:8px 10px; font-size:12px; line-height:1.4}
+    [data-theme="light"] .news-list li{background:#f7f9ff; border-color:#e8ecff}
+    .news-list li a{color:var(--accent); font-weight:600; text-decoration:none}
+    .news-list li .source{color:var(--ink-dim); font-size:11px; display:block}
+    .news-list li .snippet{display:block; margin-top:4px; color:var(--ink)}
+    .news-list .empty{color:var(--ink-dim); font-style:italic; text-align:center}
 
     @keyframes pop{from{transform:scale(.98); opacity:0} to{transform:scale(1); opacity:1}}
     @keyframes fadeup{from{transform:translateY(8px); opacity:0} to{transform:translateY(0); opacity:1}}
@@ -381,6 +393,17 @@
           <button class="btn" id="aiSaveCreds">Save</button>
           <div class="note">Your prompt can include web search instructions (optional). Enable “Attach data” to send the current state (countries, KPIs, weights, indices & rankings).</div>
           <div id="aiFileWarning" class="chip status bad" style="display:none">You are running from <b>file://</b>. Serve the page over HTTPS to avoid CORS issues.</div>
+          <div class="ai-boost">
+            <div class="pill" style="justify-content:center; font-weight:700">Advisor boost</div>
+            <label><input id="consultingPrimer" type="checkbox" checked /> Consulting-grade structure & tone</label>
+            <label><input id="aiAttachNews" type="checkbox" checked /> Attach fetched headlines to AI context</label>
+            <div class="news-search">
+              <input id="newsQuery" type="search" placeholder="e.g., Vietnam convenience retail" />
+              <button class="btn" type="button" id="newsFetch">Get news</button>
+            </div>
+            <div class="note" id="newsStatus">No news pulled yet. Enter a topic like “Indonesia convenience market”.</div>
+            <ul class="news-list" id="newsList"></ul>
+          </div>
         </div>
 
         <div class="card chat">
@@ -474,6 +497,9 @@ const kpiDefinitions = [
 /* ======= Utils ======= */
 const deepCopy = obj => JSON.parse(JSON.stringify(obj));
 const fmtFixed = (x, d=2) => (x==null || Number.isNaN(+x)) ? '—' : (+x).toLocaleString(undefined,{minimumFractionDigits:d, maximumFractionDigits:d});
+const stripHtml = (str='') => str.replace(/<[^>]+>/g,' ');
+const sanitizeUrl = (url='') => /^https?:\/\//i.test(url) ? url : '#';
+const formatNewsDate = (input)=>{ const d = new Date(input); return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US',{month:'short', day:'numeric'}); };
 function displayByUnit(unit, v){
   if(v==null || Number.isNaN(+v)) return '';
   switch(unit){
@@ -565,7 +591,10 @@ let state = {
   _weightSums: null,
   _finalScores: null,
   _scorecardTotals: null,
-  scenario: { currentName: '(Unsaved)' }
+  scenario: { currentName: '(Unsaved)' },
+  advisor: {
+    news: { query:'', items:[], fetchedAt:null }
+  }
 };
 
 /* ======= Scenario helpers (localStorage) ======= */
@@ -1295,6 +1324,12 @@ const chatSendBtn = document.getElementById('chatSend');
 const chatResetBtn = document.getElementById('chatReset');
 const aiAttachEl = document.getElementById('aiAttach');
 const aiFileWarning = document.getElementById('aiFileWarning');
+const aiAttachNewsEl = document.getElementById('aiAttachNews');
+const consultingPrimerEl = document.getElementById('consultingPrimer');
+const newsQueryEl = document.getElementById('newsQuery');
+const newsFetchBtn = document.getElementById('newsFetch');
+const newsStatusEl = document.getElementById('newsStatus');
+const newsListEl = document.getElementById('newsList');
 
 const CREDS_KEY = 'aiCreds';
 function loadCreds(){
@@ -1311,6 +1346,91 @@ function saveCreds(){
 }
 aiSaveCredsBtn.addEventListener('click', saveCreds);
 loadCreds();
+
+const NEWS_MAX_ITEMS = 6;
+function renderNewsList(){
+  if(!newsListEl) return;
+  const items = state.advisor?.news?.items || [];
+  newsListEl.innerHTML = '';
+  if(!items.length){
+    const li = document.createElement('li');
+    li.className = 'empty';
+    li.textContent = 'No headlines loaded yet. Use “Get news” to pull recent coverage.';
+    newsListEl.appendChild(li);
+    return;
+  }
+  items.forEach(item=>{
+    const li = document.createElement('li');
+    const link = document.createElement('a');
+    link.href = sanitizeUrl(item.link);
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = item.title || 'Untitled headline';
+    li.appendChild(link);
+    const meta = document.createElement('span');
+    meta.className = 'source';
+    const parts = [];
+    if(item.source) parts.push(item.source);
+    const dateTxt = formatNewsDate(item.pubDate || item.published || item.date);
+    if(dateTxt) parts.push(dateTxt);
+    meta.textContent = parts.join(' • ');
+    li.appendChild(meta);
+    if(item.snippet){
+      const snip = document.createElement('span');
+      snip.className = 'snippet';
+      snip.textContent = item.snippet;
+      li.appendChild(snip);
+    }
+    newsListEl.appendChild(li);
+  });
+}
+renderNewsList();
+
+function defaultNewsQuery(){
+  const totals = state._scorecardTotals;
+  if(!totals){
+    return 'Southeast Asia convenience retail';
+  }
+  const first = Object.entries(totals).sort((a,b)=>b[1]-a[1])[0];
+  return first ? `${first[0]} convenience retail` : 'Southeast Asia convenience retail';
+}
+
+async function fetchAdvisorNews(rawQuery){
+  const query = rawQuery || defaultNewsQuery();
+  if(!query){
+    newsStatusEl.textContent = 'Enter a topic or country to retrieve news.';
+    return;
+  }
+  newsStatusEl.textContent = `Searching headlines for “${query}”…`;
+  try{
+    const rssUrl = `https://r.jina.ai/http://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+    const res = await fetch(rssUrl, {cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const xmlText = await res.text();
+    const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+    const items = Array.from(doc.querySelectorAll('item')).slice(0, NEWS_MAX_ITEMS).map(item=>({
+      title:(item.querySelector('title')?.textContent||'').replace(/\s+/g,' ').trim(),
+      link:(item.querySelector('link')?.textContent||'').trim(),
+      source:(item.querySelector('source')?.textContent||'').trim(),
+      pubDate:(item.querySelector('pubDate')?.textContent||'').trim(),
+      snippet:stripHtml(item.querySelector('description')?.textContent||'').replace(/\s+/g,' ').trim()
+    })).filter(h=>h.title);
+    state.advisor.news = { query, items, fetchedAt:new Date().toISOString() };
+    renderNewsList();
+    newsStatusEl.textContent = items.length ? `Showing ${items.length} headline(s) for “${query}”.` : `No headlines found for “${query}”.`;
+  }catch(err){
+    console.error('News search failed', err);
+    newsStatusEl.textContent = '⚠️ Unable to load headlines. Try again later or refine your query.';
+  }
+}
+
+newsFetchBtn?.addEventListener('click', ()=> fetchAdvisorNews(newsQueryEl?.value.trim()));
+newsQueryEl?.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter'){
+    e.preventDefault();
+    fetchAdvisorNews(newsQueryEl.value.trim());
+  }
+});
 
 function chatAdd(role, text){
   const div = document.createElement('div');
@@ -1330,7 +1450,7 @@ function buildAIContext(){
     name:k.name, unit:k.unit, dir:k.direction, weight:+k.weight,
     values:k.values
   }));
-  return {
+  const ctx = {
     scenario: state.scenario.currentName,
     countries: state.scorecard.countries,
     totals_0_100: totals,
@@ -1342,7 +1462,31 @@ function buildAIContext(){
     },
     kpis
   };
+  if(aiAttachNewsEl?.checked){
+    const news = state.advisor?.news;
+    if(news?.items?.length){
+      ctx.news_query = news.query;
+      ctx.news_headlines = news.items.map(item=>({
+        title:item.title,
+        source:item.source,
+        published:item.pubDate || item.published,
+        summary:item.snippet,
+        link:item.link
+      }));
+    }
+  }
+  return ctx;
 }
+
+const CONSULTING_PRIMER = `You are a senior go-to-market advisor for convenience retail expansion in Southeast Asia. Blend quantitative insight with external signals. When headlines are provided, reference the source and date. Structure every answer in English using Markdown with the following sections:
+
+1. Executive summary – two to three sentences that synthesize attractiveness and decision outlook.
+2. Scorecard interpretation – highlight rank deltas, block strengths, and the KPIs that drive spreads.
+3. Risk & news watchlist – connect recent headlines to potential execution risks or enablers.
+4. Recommended next steps – concrete actions, diligence items, or scenario tests, each grounded in the provided data.
+5. Data appendix – mention any relevant weighted scores, indices, or KPI metrics cited.
+
+Be concise but consultative, mirroring the tone of a partner-level slide track.`;
 
 function localAdvisorReply(prompt, context){
   if(!state._scorecardTotals) renderScorecard();
@@ -1364,29 +1508,49 @@ function localAdvisorReply(prompt, context){
   };
   const focus = best[0];
   const drivers = tornadoData(focus);
-  const liftText = drivers
+  const liftList = drivers
     .filter(r=>r.up!==0)
     .sort((a,b)=>Math.abs(b.up)-Math.abs(a.up))
     .slice(0,3)
-    .map(r=>`${r.kpi} (${r.up>=0?'+':''}${r.up.toFixed(2)})`)
-    .join('; ');
-  const dragText = drivers
+    .map(r=>`${r.kpi} (${r.up>=0?'+':''}${r.up.toFixed(2)} pts)`);
+  const dragList = drivers
     .filter(r=>r.dn!==0)
     .sort((a,b)=>Math.abs(b.dn)-Math.abs(a.dn))
     .slice(0,3)
-    .map(r=>`${r.kpi} (-${Math.abs(r.dn).toFixed(2)})`)
-    .join('; ');
+    .map(r=>`${r.kpi} (${fmtFixed(r.dn,2)} pts)`);
+  const newsItems = (context?.news_headlines && context.news_headlines.length)
+    ? context.news_headlines
+    : (state.advisor?.news?.items||[]).map(n=>({title:n.title, source:n.source, published:n.pubDate, summary:n.snippet}));
+  const standings = entries.map(([country, score], idx)=>`${idx+1}. ${country} – ${fmtFixed(score,2)} pts`).join('\n');
+  const blockSummary = `Size ${blockPct(focus,'Size').toFixed(1)}, Growth ${blockPct(focus,'Growth').toFixed(1)}, Ease ${blockPct(focus,'Ease').toFixed(1)} (0–100 scale).`;
+  const newsSection = newsItems.length ? newsItems.slice(0,3).map(n=>`- ${n.title || 'Headline'}${n.source ? ` (${n.source}`:''}${n.source && n.published ? ', ':''}${n.published ? formatNewsDate(n.published):''}${n.source ? ')' : ''}${n.summary ? ` – ${n.summary}` : ''}`).join('\n') : '';
+  const recs = [];
+  if(liftList.length){ recs.push(`Prioritize diligence on ${liftList[0].split('(')[0].trim()} to amplify the current lead.`); }
+  if(dragList.length){ recs.push(`Mitigate drag factors such as ${dragList[0].split('(')[0].trim()} through scenario testing or contingency investment.`); }
+  if(laggard && laggard[0]!==focus){ recs.push(`Revisit the role of ${laggard[0]} in the portfolio; consider a defensive stance until weighted score lifts above ${fmtFixed(laggard[1],2)}.`); }
   return [
-    'Local scorecard summary:',
-    `Top ranked: ${focus} (${fmtFixed(best[1],2)})${leadTxt}.`,
-    runner ? `Runner-up: ${runner[0]} (${fmtFixed(runner[1],2)}).` : '',
-    laggard && laggard[0]!==focus ? `Lowest score: ${laggard[0]} (${fmtFixed(laggard[1],2)}).` : '',
-    `Block strengths for ${focus}: Size ${blockPct(focus,'Size').toFixed(1)}, Growth ${blockPct(focus,'Growth').toFixed(1)}, Ease ${blockPct(focus,'Ease').toFixed(1)} (0–100).`,
-    liftText ? `Top lifts if weights rise: ${liftText}.` : '',
-    dragText ? `Biggest drags when weights fall: ${dragText}.` : '',
-    prompt ? `Prompt focus: “${prompt}”.` : ''
+    '## Executive summary',
+    `${focus} leads the attractiveness scorecard at ${fmtFixed(best[1],2)}${leadTxt}. ${runner ? `${runner[0]} trails but could close the gap via the highlighted upside levers.` : 'No close challenger is within immediate reach.'}`,
+    laggard && laggard[0]!==focus ? `${laggard[0]} remains the lowest-scoring market (${fmtFixed(laggard[1],2)}), suggesting a selective or phased approach.` : '',
+    '### Scorecard standings',
+    standings,
+    '### Capability mix (normalized indices)',
+    `${focus} shows ${blockSummary}`,
+    liftList.length ? `### Priority levers\n${liftList.map(item=>`- ${item}`).join('\n')}` : '',
+    dragList.length ? `### Risks & drags\n${dragList.map(item=>`- ${item}`).join('\n')}` : '',
+    newsSection ? `### Headlines watchlist\n${newsSection}` : '',
+    recs.length ? `### Recommended next steps\n${recs.map((r,i)=>`${i+1}. ${r}`).join('\n')}` : '',
+    prompt ? `### Prompt focus\n${prompt}` : ''
   ].filter(Boolean).join('\n\n');
 }
+
+const applyConsultingPrimer = (prompt='') => {
+  const trimmed = prompt.trim();
+  if(!consultingPrimerEl || !consultingPrimerEl.checked){
+    return trimmed;
+  }
+  return `${CONSULTING_PRIMER}\n\nUser request:\n${trimmed}`.trim();
+};
 
 const CORS_PROXIES = [
   { name:'corsproxy.io', apply:url=>`https://corsproxy.io/?${encodeURIComponent(url)}`, headers:{} },
@@ -1482,21 +1646,22 @@ chatSendBtn.addEventListener('click', async ()=>{
   const endpoint = aiEndpointEl.value.trim();
   const user = aiUserEl.value.trim();
   const pass = aiPassEl.value;
-  const prompt = chatInputEl.value.trim();
-  if(!endpoint || !prompt){ alert('Fill the endpoint and your message. Include user/pass if your function requires it.'); return; }
+  const userPrompt = chatInputEl.value.trim();
+  if(!endpoint || !userPrompt){ alert('Fill the endpoint and your message. Include user/pass if your function requires it.'); return; }
 
-  chatAdd('user', prompt);
+  chatAdd('user', userPrompt);
   chatInputEl.value='';
 
   const attach = aiAttachEl.checked;
   const context = attach ? buildAIContext() : undefined;
+  const prompt = applyConsultingPrimer(userPrompt);
 
   try{
     const reply = await callNetlifyAI({endpoint, user, pass, prompt, context});
     chatAdd('ai', reply);
   }catch(e){
     if(e?.code === 'AI_UNREACHABLE'){
-      const fallback = localAdvisorReply(prompt, context);
+      const fallback = localAdvisorReply(userPrompt, context);
       chatAdd('ai', `⚠️ Remote AI unreachable after trying HTTPS + CORS helpers.
 
 ${fallback}`);
